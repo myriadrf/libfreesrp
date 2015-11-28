@@ -6,6 +6,11 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
+#include <atomic>
+#include <thread>
+#include <mutex>
+
+#include <boost/circular_buffer.hpp>
 
 #include <libusb.h>
 
@@ -25,6 +30,9 @@
 #define FREESRP_UART_BUF_SIZE 16
 
 #define FREESRP_RX_TX_BUF_SIZE 1024 * 64
+#define FREESRP_RX_TX_TRANSFER_QUEUE_SIZE 32
+
+#define LIB_RX_TX_BUF_SIZE FREESRP_RX_TX_BUF_SIZE * FREESRP_RX_TX_TRANSFER_QUEUE_SIZE
 
 // FreeSRP vendor commands
 #define FREESRP_GET_VERSION_REQ 0
@@ -35,6 +43,12 @@ namespace FreeSRP
     {
         unsigned int size;
         std::array<unsigned char, FREESRP_RX_TX_BUF_SIZE> data;
+    };
+
+    struct sample
+    {
+        float i;
+        float q;
     };
 
     typedef std::array<unsigned char, FREESRP_UART_BUF_SIZE> cmd_buf;
@@ -121,15 +135,32 @@ namespace FreeSRP
         void tx(std::shared_ptr<rx_tx_buf> buf);
 
         void start_rx();
+        void stop_rx();
+
+        unsigned long available_rx_samples();
+        sample get_rx_sample();
 
         response send_cmd(command c) const;
 
         std::string firmware_version();
     private:
+        void run_rx_tx();
+
+        libusb_transfer *create_rx_transfer(libusb_transfer_cb_fn callback);
+        static void rx_callback(libusb_transfer *transfer);
+
         libusb_context *_ctx = nullptr;
         libusb_device_handle *_freesrp_handle = nullptr;
 
         std::string _freesrp_fw_version;
+
+        std::atomic<bool> _run_rx_tx{false};
+        std::unique_ptr<std::thread> _rx_tx_worker;
+
+        std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
+
+        static std::mutex _rx_buf_mutex;
+        static boost::circular_buffer<sample> _rx_buf;
     };
 }
 

@@ -4,6 +4,9 @@
 
 using namespace FreeSRP;
 
+boost::circular_buffer<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
+std::mutex FreeSRP::FreeSRP::_rx_buf_mutex;
+
 FreeSRP::FreeSRP::FreeSRP()
 {
     libusb_device **devs;
@@ -69,14 +72,44 @@ FreeSRP::FreeSRP::FreeSRP()
     }
     int transferred = ret;
     _freesrp_fw_version = std::string(std::begin(data), std::begin(data) + transferred);
+
+    for(int i = 0; i < _rx_transfers.size(); i++)
+    {
+        _rx_transfers[i] = create_rx_transfer(&FreeSRP::rx_callback);
+    }
+
+    // Start libusb event handling
+    _run_rx_tx.store(true);
+
+    _rx_tx_worker.reset(new std::thread([this]() {
+        run_rx_tx();
+    }));
 }
 
 FreeSRP::FreeSRP::~FreeSRP()
 {
+    // TODO: Properly stop all active transfers
+    stop_rx();
+
     if(_freesrp_handle != nullptr)
     {
         libusb_release_interface(_freesrp_handle, 0);
+
+        _run_rx_tx.store(false);
+
+        // This will cause libusb_handle_events() in run_rx_tx() to return once
         libusb_close(_freesrp_handle);
+
+        // libusb_handle_events should have returned and the thread can now be joined
+        if(_rx_tx_worker != nullptr)
+        {
+            _rx_tx_worker->join();
+        }
+    }
+
+    for(libusb_transfer *transfer : _rx_transfers)
+    {
+        libusb_free_transfer(transfer);
     }
 
     if(_ctx != nullptr)
@@ -114,14 +147,127 @@ void FreeSRP::FreeSRP::tx(std::shared_ptr<rx_tx_buf> rx_data)
     }
 }
 
+libusb_transfer *FreeSRP::FreeSRP::create_rx_transfer(libusb_transfer_cb_fn callback)
+{
+    libusb_transfer *transfer = libusb_alloc_transfer(0);
+    unsigned char *buf = new unsigned char[FREESRP_RX_TX_BUF_SIZE];
+    libusb_fill_bulk_transfer(transfer, _freesrp_handle, FREESRP_RX_IN, buf, FREESRP_RX_TX_BUF_SIZE, callback, nullptr, FREESRP_USB_TIMEOUT);
+
+    return transfer;
+}
+
+void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
+{
+    if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
+    {
+        // Success
+        transfer->buffer;
+
+        for(int i = 0; i < transfer->actual_length; i+=4)
+        {
+            uint16_t raw_i;
+            uint16_t raw_q;
+            memcpy(&raw_q, transfer->buffer + i, sizeof(raw_q));
+            memcpy(&raw_i, transfer->buffer + i + sizeof(raw_q), sizeof(raw_i));
+
+            // Convert the raw I/Q values from 12-bit (two's complement) to 16-bit signed integers
+            int16_t signed_i;
+            int16_t signed_q;
+            // Do sign extension
+            bool i_negative = (raw_i & (1 << 11)) != 0;
+            bool q_negative = (raw_q & (1 << 11)) != 0;
+            if(i_negative)
+            {
+                signed_i = (int16_t) (raw_i | ~((1 << 11) - 1));
+            }
+            else
+            {
+                signed_i = raw_i;
+            }
+            if(q_negative)
+            {
+                signed_q = (int16_t) (raw_q | ~((1 << 11) - 1));
+            }
+            else
+            {
+                signed_q = raw_q;
+            }
+
+            // Convert the signed integers (range -2048 to 2047) to floats (range -1 to 1)
+            sample s;
+            s.i = (float) signed_i / 2048.0f;
+            s.q = (float) signed_q / 2048.0f;
+
+            std::lock_guard<std::mutex> lock(_rx_buf_mutex);
+            _rx_buf.push_back(s);
+        }
+    }
+    else
+    {
+        // TODO: Handle error
+    }
+
+    // Resubmit the transfer
+    if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
+    {
+        int ret = libusb_submit_transfer(transfer);
+
+        if(ret < 0)
+        {
+            // TODO: Handle error
+        }
+    }
+}
+
 void FreeSRP::FreeSRP::start_rx()
 {
-    /*libusb_transfer *transfer;
-    std::shared_ptr<rx_tx_buf> rx_buf = std::make_shared<rx_tx_buf>();
-    int completed = 0;
+    for(libusb_transfer *transfer: _rx_transfers)
+    {
+        int ret = libusb_submit_transfer(transfer);
 
-    transfer = libusb_alloc_transfer(0);
-    libusb_fill_bulk_transfer(transfer, _freesrp_handle, FREESRP_RX_IN, rx_buf->data.data(), (int) rx_buf->size, callback, user_data, FREESRP_USB_TIMEOUT);*/
+        if(ret < 0)
+        {
+            throw ConnectionError("Could not submit RX transfer. libusb error: " + std::to_string(ret));
+        }
+    }
+}
+
+void FreeSRP::FreeSRP::stop_rx()
+{
+    for(libusb_transfer *transfer: _rx_transfers)
+    {
+        int ret = libusb_cancel_transfer(transfer);
+        if(ret == LIBUSB_ERROR_NOT_FOUND || ret == 0)
+        {
+            // Transfer cancelled
+        }
+        else
+        {
+            // Error
+            throw ConnectionError("Could not cancel RX transfer. libusb error: " + std::to_string(ret));
+        }
+    }
+}
+
+void FreeSRP::FreeSRP::run_rx_tx()
+{
+    while(_run_rx_tx.load())
+    {
+        libusb_handle_events(_ctx);
+    }
+}
+
+unsigned long FreeSRP::FreeSRP::available_rx_samples()
+{
+    return _rx_buf.size();
+}
+
+sample FreeSRP::FreeSRP::get_rx_sample()
+{
+    std::lock_guard<std::mutex> lock(_rx_buf_mutex);
+    sample s = _rx_buf.front();
+    _rx_buf.pop_front();
+    return s;
 }
 
 response FreeSRP::FreeSRP::send_cmd(command cmd) const

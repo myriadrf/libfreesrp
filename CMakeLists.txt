@@ -17,7 +17,6 @@ file(GLOB_RECURSE LIBFREESRP_SRC_FILES
 
 file(GLOB_RECURSE LIBFREESRP_INCLUDE_FILES
     ${PROJECT_SOURCE_DIR}/include/*.hpp
-    ${PROJECT_SOURCE_DIR}/include/*.cpp
 )
 
 add_library(
@@ -44,3 +43,7 @@ file(GLOB_RECURSE FREESRP_CTL_FILES
 )
 add_executable(freesrp-ctl ${FREESRP_CTL_FILES})
 target_link_libraries(freesrp-ctl freesrp)
+
+# Install library
+install(TARGETS freesrp LIBRARY DESTINATION lib)
+install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
