@@ -4,8 +4,7 @@
 
 using namespace FreeSRP;
 
-boost::circular_buffer<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
-std::mutex FreeSRP::FreeSRP::_rx_buf_mutex;
+moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
 
 FreeSRP::FreeSRP::FreeSRP()
 {
@@ -161,7 +160,6 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
     if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
         // Success
-        transfer->buffer;
 
         for(int i = 0; i < transfer->actual_length; i+=4)
         {
@@ -198,8 +196,11 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
             s.i = (float) signed_i / 2048.0f;
             s.q = (float) signed_q / 2048.0f;
 
-            std::lock_guard<std::mutex> lock(_rx_buf_mutex);
-            _rx_buf.push_back(s);
+            bool success = _rx_buf.try_enqueue(s);
+            if(!success)
+            {
+                // TODO: overflow! handle this
+            }
         }
     }
     else
@@ -259,15 +260,12 @@ void FreeSRP::FreeSRP::run_rx_tx()
 
 unsigned long FreeSRP::FreeSRP::available_rx_samples()
 {
-    return _rx_buf.size();
+    return _rx_buf.size_approx();
 }
 
-sample FreeSRP::FreeSRP::get_rx_sample()
+bool FreeSRP::FreeSRP::get_rx_sample(sample &s)
 {
-    std::lock_guard<std::mutex> lock(_rx_buf_mutex);
-    sample s = _rx_buf.front();
-    _rx_buf.pop_front();
-    return s;
+    return _rx_buf.try_dequeue(s);
 }
 
 response FreeSRP::FreeSRP::send_cmd(command cmd) const

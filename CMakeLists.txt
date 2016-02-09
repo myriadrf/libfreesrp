@@ -19,6 +19,10 @@ file(GLOB_RECURSE LIBFREESRP_INCLUDE_FILES
     ${PROJECT_SOURCE_DIR}/include/*.hpp
 )
 
+file(GLOB_RECURSE READERWRITERQUEUE_INCLUDE_FILES
+    ${PROJECT_SOURCE_DIR}/include/readerwriterqueue/*.h
+)
+
 add_library(
     freesrp
     SHARED
@@ -47,3 +51,4 @@ target_link_libraries(freesrp-ctl freesrp)
 # Install library
 install(TARGETS freesrp LIBRARY DESTINATION lib)
 install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
+install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)

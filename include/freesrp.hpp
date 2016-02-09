@@ -8,11 +8,10 @@
 #include <memory>
 #include <atomic>
 #include <thread>
-#include <mutex>
-
-#include <boost/circular_buffer.hpp>
 
 #include <libusb.h>
+
+#include <readerwriterqueue/readerwriterqueue.h>
 
 //#define FREESRP_VENDOR_ID 0xe1ec
 //#define FREESRP_PRODUCT_ID 0xf5d0
@@ -30,7 +29,7 @@
 #define FREESRP_UART_BUF_SIZE 16
 
 #define FREESRP_RX_TX_BUF_SIZE 1024 * 64
-#define FREESRP_RX_TX_TRANSFER_QUEUE_SIZE 32
+#define FREESRP_RX_TX_TRANSFER_QUEUE_SIZE 64
 
 #define LIB_RX_TX_BUF_SIZE FREESRP_RX_TX_BUF_SIZE * FREESRP_RX_TX_TRANSFER_QUEUE_SIZE
 
@@ -138,7 +137,7 @@ namespace FreeSRP
         void stop_rx();
 
         unsigned long available_rx_samples();
-        sample get_rx_sample();
+        bool get_rx_sample(sample &s);
 
         response send_cmd(command c) const;
 
@@ -159,8 +158,7 @@ namespace FreeSRP
 
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
 
-        static std::mutex _rx_buf_mutex;
-        static boost::circular_buffer<sample> _rx_buf;
+        static moodycamel::ReaderWriterQueue<sample> _rx_buf;
     };
 }
 

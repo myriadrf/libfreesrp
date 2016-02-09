@@ -24,30 +24,26 @@ int main()
         auto start_rx_time = chrono::system_clock::now();
 
         unsigned long received_samples = 0;
-        const unsigned long samples_to_receive = 1024 * 1024;
+        const unsigned long samples_to_receive = 1024 * 1024 * 40;
+
         while(received_samples < samples_to_receive)
         {
-            if(srp.available_rx_samples() == 0)
+            sample s;
+            bool success = srp.get_rx_sample(s);
+            if(success)
             {
-                // No samples available.
-            }
-            else
-            {
-                // Samples available. Read all available.
-                while(srp.available_rx_samples())
-                {
-                    sample s = srp.get_rx_sample();
-                    received_samples++;
-                }
+                received_samples++;
             }
         }
+        //this_thread::sleep_for(chrono::milliseconds(250));
+        //received_samples = srp.available_rx_samples();
 
         auto duration_rx = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - start_rx_time);
 
         srp.stop_rx();
 
         cout << "Received " << received_samples << " / " << samples_to_receive << endl;
-        cout << "Received " << received_samples << " samples in " << duration_rx.count() / 1000.0 << " ms (" << ((float) received_samples / (float) duration_rx.count()) << " MSps / " << (received_samples * 32.0 / (float) duration_rx.count()) << " MBps)" << endl;
+        cout << "Received " << received_samples << " samples in " << (duration_rx.count() / 1000.0) << " ms (" << ((float) received_samples / (float) duration_rx.count()) << " MSps / " << ((received_samples * 4) / (float) duration_rx.count()) << " MBps)" << endl;
 
         /*
         // Test TX
@@ -69,6 +65,7 @@ int main()
         this_thread::sleep_for(chrono::milliseconds(10));
 
         // Test RX
+        long received_samples = 0;
         auto start = chrono::system_clock::now();
         shared_ptr<rx_tx_buf> rx_buf;
         rx_buf = srp.rx();
@@ -115,9 +112,11 @@ int main()
             float q_value = (float) signed_q / 2048.0f;
 
             cout << "I: " << i_value << "\tQ: " << q_value << "\t" << signed_i << "\t" << signed_q << endl;
+            received_samples++;
         }
 
-        cout << "Received " << rx_buf->size << " bytes in " << duration.count() << " us (" << (rx_buf->size / duration.count()) << " MBps)" << endl;
+        cout << "Received " << received_samples << " samples in " << duration.count() / 1000.0 << " ms (" << ((float) received_samples / (float) duration.count()) << " MSps / " << (rx_buf->size / (float) duration.count()) << " MBps)" << endl;
+        //cout << "Received " << rx_buf->size << " bytes in " << duration.count() << " us (" << (rx_buf->size / duration.count()) << " MBps)" << endl;
         */
     }
     catch(ConnectionError e)
