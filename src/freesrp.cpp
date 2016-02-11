@@ -4,8 +4,8 @@
 
 using namespace FreeSRP;
 
-moodycamel::BlockingReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
-moodycamel::BlockingReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(LIB_RX_TX_BUF_SIZE);
+moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
+moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(LIB_RX_TX_BUF_SIZE);
 
 FreeSRP::FreeSRP::FreeSRP()
 {
@@ -329,6 +329,7 @@ void FreeSRP::FreeSRP::stop_tx()
 int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
 {
     // Fill the transfer buffer with available samples
+    transfer->length = FREESRP_RX_TX_BUF_SIZE;
     for(int i = 0; i < transfer->length; i++)
     {
         sample s;
@@ -389,13 +390,6 @@ unsigned long FreeSRP::FreeSRP::available_rx_samples()
 bool FreeSRP::FreeSRP::get_rx_sample(sample &s)
 {
     return _rx_buf.try_dequeue(s);
-}
-
-sample FreeSRP::FreeSRP::wait_rx_sample()
-{
-    sample s;
-    _rx_buf.wait_dequeue(s);
-    return s;
 }
 
 bool FreeSRP::FreeSRP::submit_tx_sample(sample* s)

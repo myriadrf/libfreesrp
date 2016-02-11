@@ -141,7 +141,6 @@ namespace FreeSRP
 
         unsigned long available_rx_samples();
         bool get_rx_sample(sample &s);
-        sample wait_rx_sample();
 
         bool submit_tx_sample(sample *s);
 
@@ -170,8 +169,8 @@ namespace FreeSRP
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
 
-        static moodycamel::BlockingReaderWriterQueue<sample> _rx_buf;
-        static moodycamel::BlockingReaderWriterQueue<sample> _tx_buf;
+        static moodycamel::ReaderWriterQueue<sample> _rx_buf;
+        static moodycamel::ReaderWriterQueue<sample> _tx_buf;
     };
 }
 
