@@ -4,7 +4,8 @@
 
 using namespace FreeSRP;
 
-moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
+moodycamel::BlockingReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
+moodycamel::BlockingReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(LIB_RX_TX_BUF_SIZE);
 
 FreeSRP::FreeSRP::FreeSRP()
 {
@@ -77,6 +78,11 @@ FreeSRP::FreeSRP::FreeSRP()
         _rx_transfers[i] = create_rx_transfer(&FreeSRP::rx_callback);
     }
 
+    for(int i = 0; i < _tx_transfers.size(); i++)
+    {
+        _tx_transfers[i] = create_tx_transfer(&FreeSRP::tx_callback);
+    }
+
     // Start libusb event handling
     _run_rx_tx.store(true);
 
@@ -89,6 +95,7 @@ FreeSRP::FreeSRP::~FreeSRP()
 {
     // TODO: Properly stop all active transfers
     stop_rx();
+    stop_tx();
 
     if(_freesrp_handle != nullptr)
     {
@@ -107,6 +114,11 @@ FreeSRP::FreeSRP::~FreeSRP()
     }
 
     for(libusb_transfer *transfer : _rx_transfers)
+    {
+        libusb_free_transfer(transfer);
+    }
+
+    for(libusb_transfer *transfer : _tx_transfers)
     {
         libusb_free_transfer(transfer);
     }
@@ -151,6 +163,15 @@ libusb_transfer *FreeSRP::FreeSRP::create_rx_transfer(libusb_transfer_cb_fn call
     libusb_transfer *transfer = libusb_alloc_transfer(0);
     unsigned char *buf = new unsigned char[FREESRP_RX_TX_BUF_SIZE];
     libusb_fill_bulk_transfer(transfer, _freesrp_handle, FREESRP_RX_IN, buf, FREESRP_RX_TX_BUF_SIZE, callback, nullptr, FREESRP_USB_TIMEOUT);
+
+    return transfer;
+}
+
+libusb_transfer *FreeSRP::FreeSRP::create_tx_transfer(libusb_transfer_cb_fn callback)
+{
+    libusb_transfer *transfer = libusb_alloc_transfer(0);
+    unsigned char *buf = new unsigned char[FREESRP_RX_TX_BUF_SIZE];
+    libusb_fill_bulk_transfer(transfer, _freesrp_handle, FREESRP_TX_OUT, buf, FREESRP_RX_TX_BUF_SIZE, callback, nullptr, FREESRP_USB_TIMEOUT);
 
     return transfer;
 }
@@ -220,6 +241,30 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
     }
 }
 
+void FreeSRP::FreeSRP::tx_callback(libusb_transfer* transfer)
+{
+    if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
+    {
+        // Success
+    }
+    else
+    {
+        // TODO: Handle error
+    }
+
+    // Resubmit the transfer with new data
+    if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
+    {
+        fill_tx_transfer(transfer);
+        int ret = libusb_submit_transfer(transfer);
+
+        if(ret < 0)
+        {
+            // TODO: Handle error
+        }
+    }
+}
+
 void FreeSRP::FreeSRP::start_rx()
 {
     for(libusb_transfer *transfer: _rx_transfers)
@@ -250,6 +295,84 @@ void FreeSRP::FreeSRP::stop_rx()
     }
 }
 
+void FreeSRP::FreeSRP::start_tx()
+{
+    for(libusb_transfer *transfer: _tx_transfers)
+    {
+        fill_tx_transfer(transfer);
+        int ret = libusb_submit_transfer(transfer);
+
+        if(ret < 0)
+        {
+            throw ConnectionError("Could not submit TX transfer. libusb error: " + std::to_string(ret));
+        }
+    }
+}
+
+void FreeSRP::FreeSRP::stop_tx()
+{
+    for(libusb_transfer *transfer: _tx_transfers)
+    {
+        int ret = libusb_cancel_transfer(transfer);
+        if(ret == LIBUSB_ERROR_NOT_FOUND || ret == 0)
+        {
+            // Transfer cancelled
+        }
+        else
+        {
+            // Error
+            throw ConnectionError("Could not cancel TX transfer. libusb error: " + std::to_string(ret));
+        }
+    }
+}
+
+int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
+{
+    // Fill the transfer buffer with available samples
+    for(int i = 0; i < transfer->length; i++)
+    {
+        sample s;
+        int success = _tx_buf.try_dequeue(s);
+        if(!success)
+        {
+            transfer->length = i;
+            break;
+        }
+
+        // Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
+        int16_t signed_i = (int16_t) (s.i * 2048.0f);
+        int16_t signed_q = (int16_t) (s.q * 2048.0f);
+
+        // Unsigned 16-bit ints holding the two's-complement 12-bit sample values
+        uint16_t raw_i;
+        uint16_t raw_q;
+
+        if(signed_i >= 0)
+        {
+            raw_i = (uint16_t) signed_i;
+        }
+        else
+        {
+            raw_i = (uint16_t) (1 << 11) + signed_i;
+        }
+
+        if(signed_q >= 0)
+        {
+            raw_q = (uint16_t) signed_q;
+        }
+        else
+        {
+            raw_q = (uint16_t) (1 << 11) + signed_q;
+        }
+
+        // Copy raw i/q data into the buffer
+        memcpy(transfer->buffer + i, &raw_q, sizeof(raw_q));
+        memcpy(transfer->buffer + i + sizeof(raw_q), &raw_i, sizeof(raw_i));
+    }
+
+    return transfer->length;
+}
+
 void FreeSRP::FreeSRP::run_rx_tx()
 {
     while(_run_rx_tx.load())
@@ -266,6 +389,18 @@ unsigned long FreeSRP::FreeSRP::available_rx_samples()
 bool FreeSRP::FreeSRP::get_rx_sample(sample &s)
 {
     return _rx_buf.try_dequeue(s);
+}
+
+sample FreeSRP::FreeSRP::wait_rx_sample()
+{
+    sample s;
+    _rx_buf.wait_dequeue(s);
+    return s;
+}
+
+bool FreeSRP::FreeSRP::submit_tx_sample(sample* s)
+{
+    return _tx_buf.try_enqueue(*s);
 }
 
 response FreeSRP::FreeSRP::send_cmd(command cmd) const

@@ -136,8 +136,14 @@ namespace FreeSRP
         void start_rx();
         void stop_rx();
 
+        void start_tx();
+        void stop_tx();
+
         unsigned long available_rx_samples();
         bool get_rx_sample(sample &s);
+        sample wait_rx_sample();
+
+        bool submit_tx_sample(sample *s);
 
         response send_cmd(command c) const;
 
@@ -146,7 +152,12 @@ namespace FreeSRP
         void run_rx_tx();
 
         libusb_transfer *create_rx_transfer(libusb_transfer_cb_fn callback);
+        libusb_transfer *create_tx_transfer(libusb_transfer_cb_fn callback);
+
         static void rx_callback(libusb_transfer *transfer);
+        static void tx_callback(libusb_transfer *transfer);
+
+        static int fill_tx_transfer(libusb_transfer *transfer);
 
         libusb_context *_ctx = nullptr;
         libusb_device_handle *_freesrp_handle = nullptr;
@@ -157,8 +168,10 @@ namespace FreeSRP
         std::unique_ptr<std::thread> _rx_tx_worker;
 
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
+        std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
 
-        static moodycamel::ReaderWriterQueue<sample> _rx_buf;
+        static moodycamel::BlockingReaderWriterQueue<sample> _rx_buf;
+        static moodycamel::BlockingReaderWriterQueue<sample> _tx_buf;
     };
 }
 
