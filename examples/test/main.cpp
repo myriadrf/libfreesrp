@@ -15,9 +15,15 @@ int main()
         FreeSRP::FreeSRP srp;
         cout << "firmware version is " << srp.firmware_version() << endl;
 
+        cout << "----TEST CMD----------------------------------------------------------------" << endl;
+
         cout << srp.send_cmd({SET_RX_LO_FREQ, 1400}) << endl;
         cout << srp.send_cmd({GET_RX_LO_FREQ}) << endl;
         cout << srp.send_cmd({SET_DATAPATH_EN, 1}) << endl;
+
+        // Test RX
+
+        cout << "----TEST RX-----------------------------------------------------------------" << endl;
 
         srp.start_rx();
 
@@ -35,8 +41,6 @@ int main()
                 received_samples++;
             }
         }
-        //this_thread::sleep_for(chrono::milliseconds(250));
-        //received_samples = srp.available_rx_samples();
 
         auto duration_rx = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - start_rx_time);
 
@@ -45,7 +49,35 @@ int main()
         cout << "Received " << received_samples << " / " << samples_to_receive << endl;
         cout << "Received " << received_samples << " samples in " << (duration_rx.count() / 1000.0) << " ms (" << ((float) received_samples / (float) duration_rx.count()) << " MSps / " << ((received_samples * 4) / (float) duration_rx.count()) << " MBps)" << endl;
 
-        /*
+        // Test TX
+
+        cout << "----TEST TX-----------------------------------------------------------------" << endl;
+
+        srp.start_tx();
+
+        auto start_tx_time = chrono::system_clock::now();
+
+        unsigned long sent_samples = 0;
+        const unsigned long samples_to_send = 1024 * 1024 * 40;
+
+        while(sent_samples < samples_to_send)
+        {
+            sample s{0.5f, 0.5f};
+            bool success = srp.submit_tx_sample(s);
+            if(success)
+            {
+                sent_samples++;
+            }
+        }
+
+        auto duration_tx = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - start_tx_time);
+
+        srp.stop_tx();
+
+        cout << "Sent " << sent_samples << " / " << samples_to_send << endl;
+        cout << "Sent " << sent_samples << " samples in " << (duration_tx.count() / 1000.0) << " ms (" << ((float) received_samples / (float) duration_tx.count()) << " MSps / " << ((sent_samples * 4) / (float) duration_tx.count()) << " MBps)" << endl;
+
+        /* OLD SYNCHRONOUS INTERFACE
         // Test TX
         shared_ptr<rx_tx_buf> tx_buf = make_shared<rx_tx_buf>();
         tx_buf->size = 1024;

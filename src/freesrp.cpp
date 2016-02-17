@@ -392,9 +392,9 @@ bool FreeSRP::FreeSRP::get_rx_sample(sample &s)
     return _rx_buf.try_dequeue(s);
 }
 
-bool FreeSRP::FreeSRP::submit_tx_sample(sample* s)
+bool FreeSRP::FreeSRP::submit_tx_sample(sample &s)
 {
-    return _tx_buf.try_enqueue(*s);
+    return _tx_buf.try_enqueue(s);
 }
 
 response FreeSRP::FreeSRP::send_cmd(command cmd) const

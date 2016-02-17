@@ -142,7 +142,7 @@ namespace FreeSRP
         unsigned long available_rx_samples();
         bool get_rx_sample(sample &s);
 
-        bool submit_tx_sample(sample *s);
+        bool submit_tx_sample(sample &s);
 
         response send_cmd(command c) const;
 
