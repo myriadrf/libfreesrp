@@ -27,12 +27,12 @@ namespace cmds
     };
 
     const vector<param_def> set_params = {
-        {"tx_lo", "set transmitter local oscillator frequency [MHz]", FreeSRP::SET_TX_LO_FREQ},
+        {"tx_lo", "set transmitter local oscillator frequency [Hz]", FreeSRP::SET_TX_LO_FREQ},
         {"tx_samp", "set transmitter sample rate [Hz]", FreeSRP::SET_TX_SAMP_FREQ},
         {"tx_bw", "set transmitter bandwidth [Hz]", FreeSRP::SET_TX_RF_BANDWIDTH},
         {"tx_atten", "set transmitter attenuation [milli-dB]", FreeSRP::SET_TX_ATTENUATION},
         {"tx_fir_en", "enable/disable transmitter FIR filter [enable|disable]", FreeSRP::SET_TX_FIR_EN},
-        {"rx_lo", "set receiver local oscillator frequency [MHz]", FreeSRP::SET_RX_LO_FREQ},
+        {"rx_lo", "set receiver local oscillator frequency [Hz]", FreeSRP::SET_RX_LO_FREQ},
         {"rx_samp", "set receiver sample rate [Hz]", FreeSRP::SET_RX_SAMP_FREQ},
         {"rx_bw", "set receiver bandwidth [Hz]", FreeSRP::SET_RX_RF_BANDWIDTH},
         {"rx_gc", "set receiver gain control mode [??]", FreeSRP::SET_RX_GC_MODE},
@@ -42,12 +42,12 @@ namespace cmds
     };
 
     const vector<param_def> get_params = {
-        {"tx_lo", "get transmitter local oscillator frequency [MHz]", FreeSRP::GET_TX_LO_FREQ},
+        {"tx_lo", "get transmitter local oscillator frequency [Hz]", FreeSRP::GET_TX_LO_FREQ},
         {"tx_samp", "get transmitter sample rate [Hz]", FreeSRP::GET_TX_SAMP_FREQ},
         {"tx_bw", "get transmitter bandwidth [Hz]", FreeSRP::GET_TX_RF_BANDWIDTH},
         {"tx_atten", "get transmitter attenuation [milli-dB]", FreeSRP::GET_TX_ATTENUATION},
         {"tx_fir_en", "get transmitter FIR filter status [enabled|disabled]", FreeSRP::GET_TX_FIR_EN},
-        {"rx_lo", "get receiver local oscillator frequency [MHz]", FreeSRP::GET_RX_LO_FREQ},
+        {"rx_lo", "get receiver local oscillator frequency [Hz]", FreeSRP::GET_RX_LO_FREQ},
         {"rx_samp", "get receiver sample rate [Hz]", FreeSRP::GET_RX_SAMP_FREQ},
         {"rx_bw", "get receiver bandwidth [Hz]", FreeSRP::GET_RX_RF_BANDWIDTH},
         {"rx_gc", "get receiver gain control mode [??]", FreeSRP::GET_RX_GC_MODE},
@@ -99,7 +99,7 @@ namespace cmds
                     try
                     {
                         double value = boost::lexical_cast<double>(params[1]);
-                        FreeSRP::command cmd{def.id, value};
+                        FreeSRP::command cmd = srp.make_command(def.id, value);
                         FreeSRP::response res = srp.send_cmd(cmd);
                         if(res.error != FreeSRP::CMD_OK)
                         {

@@ -397,6 +397,92 @@ bool FreeSRP::FreeSRP::submit_tx_sample(sample &s)
     return _tx_buf.try_enqueue(s);
 }
 
+command FreeSRP::FreeSRP::make_command(command_id id, double param) const
+{
+    command cmd;
+
+    cmd.cmd = id;
+    switch(cmd.cmd)
+    {
+    case SET_TX_LO_FREQ:
+    {
+        uint64_t cast_param = static_cast<uint64_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_TX_SAMP_FREQ:
+    {
+        uint32_t cast_param = static_cast<uint32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_TX_RF_BANDWIDTH:
+    {
+        uint32_t cast_param = static_cast<uint32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_TX_ATTENUATION:
+    {
+        uint32_t cast_param = static_cast<uint32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_TX_FIR_EN:
+    {
+        uint8_t cast_param = static_cast<uint8_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_LO_FREQ:
+    {
+        uint64_t cast_param = static_cast<uint64_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_SAMP_FREQ:
+    {
+        uint32_t cast_param = static_cast<uint32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_RF_BANDWIDTH:
+    {
+        uint32_t cast_param = static_cast<uint32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_GC_MODE:
+    {
+        uint8_t cast_param = static_cast<uint8_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_RF_GAIN:
+    {
+        int32_t cast_param = static_cast<int32_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_RX_FIR_EN:
+    {
+        uint8_t cast_param = static_cast<uint8_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    case SET_DATAPATH_EN:
+    {
+        uint8_t cast_param = static_cast<uint8_t>(param);
+        memcpy(&cmd.param, &cast_param, sizeof(cast_param));
+    }
+        break;
+    default:
+        throw std::runtime_error("make_command error: " + std::to_string(id));
+    }
+
+    return cmd;
+}
+
 response FreeSRP::FreeSRP::send_cmd(command cmd) const
 {
     cmd_buf tx_buf{cmd.cmd, 1};

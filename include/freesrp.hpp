@@ -8,6 +8,7 @@
 #include <memory>
 #include <atomic>
 #include <thread>
+#include <cstdint>
 
 #include <libusb.h>
 
@@ -61,42 +62,43 @@ namespace FreeSRP
 
     enum command_id
     {
-        GET_REGISTER = 0,
-        GET_TX_LO_FREQ,
-        SET_TX_LO_FREQ,
-        GET_TX_SAMP_FREQ,
-        SET_TX_SAMP_FREQ,
-        GET_TX_RF_BANDWIDTH,
-        SET_TX_RF_BANDWIDTH,
-        GET_TX_ATTENUATION,
-        SET_TX_ATTENUATION,
-        GET_TX_FIR_EN,
-        SET_TX_FIR_EN,
-        GET_RX_LO_FREQ,
-        SET_RX_LO_FREQ,
-        GET_RX_SAMP_FREQ,
-        SET_RX_SAMP_FREQ,
-        GET_RX_RF_BANDWIDTH,
-        SET_RX_RF_BANDWIDTH,
-        GET_RX_GC_MODE,
-        SET_RX_GC_MODE,
-        GET_RX_RF_GAIN,
-        SET_RX_RF_GAIN,
-        GET_RX_FIR_EN,
-        SET_RX_FIR_EN,
-        SET_DATAPATH_EN,
+        GET_REGISTER, 			/* 00: [UINT16_T] -> [UINT8_T] */
+        GET_TX_LO_FREQ, 		/* 01:            -> [UINT64_T] */
+        SET_TX_LO_FREQ, 		/* 02: [UINT64_T] -> [UINT64_T] */
+        GET_TX_SAMP_FREQ, 		/* 03:            -> [UINT32_T] */
+        SET_TX_SAMP_FREQ, 		/* 04: [UINT32_T] -> [UINT32_T] */
+        GET_TX_RF_BANDWIDTH, 	/* 05:            -> [UINT32_T] */
+        SET_TX_RF_BANDWIDTH, 	/* 06: [UINT32_T] -> [UINT32_T] */
+        GET_TX_ATTENUATION, 	/* 07:            -> [UINT32_T] */
+        SET_TX_ATTENUATION, 	/* 08: [UINT32_T] -> [UINT32_T] */
+        GET_TX_FIR_EN, 			/* 09:            -> [UINT8_T] */
+        SET_TX_FIR_EN, 			/* 10: [UINT8_T]  -> [UINT8_T] */
+        GET_RX_LO_FREQ, 		/* 11:            -> [UINT64_T] */
+        SET_RX_LO_FREQ, 		/* 12: [UINT64_T] -> [UINT64_T] */
+        GET_RX_SAMP_FREQ, 		/* 13:            -> [UINT32_T] */
+        SET_RX_SAMP_FREQ, 		/* 14: [UINT32_T] -> [UINT32_T] */
+        GET_RX_RF_BANDWIDTH, 	/* 15:            -> [UINT32_T] */
+        SET_RX_RF_BANDWIDTH, 	/* 16: [UINT32_T] -> [UINT32_T] */
+        GET_RX_GC_MODE, 		/* 17:            -> [UINT8_T] */
+        SET_RX_GC_MODE, 		/* 18: [UINT8_T]  -> [UINT8_T] */
+        GET_RX_RF_GAIN,			/* 19:            -> [INT32_T] */
+        SET_RX_RF_GAIN, 		/* 20: [INT32_T]  -> [INT32_T] */
+        GET_RX_FIR_EN, 			/* 21:            -> [UINT8_T] */
+        SET_RX_FIR_EN, 			/* 22: [UINT8_T]  -> [UINT8_T] */
+        SET_DATAPATH_EN, 		/* 23: [UINT8_T]  -> [UINT8_T] */
     };
 
     enum command_err
     {
         CMD_OK = 0,
-        CMD_INVALID_PARAM
+        CMD_INVALID_PARAM,
+        CMD_ENSM_ERR
     };
 
     struct command
     {
         command_id cmd;
-        double param;
+        uint64_t param;
 
         friend std::ostream &operator<<(std::ostream &o, const command cmd)
         {
@@ -107,7 +109,7 @@ namespace FreeSRP
     struct response
     {
         command_id cmd;
-        double param;
+        uint64_t param;
         command_err error;
 
         friend std::ostream &operator<<(std::ostream &o, const response res)
@@ -144,6 +146,7 @@ namespace FreeSRP
 
         bool submit_tx_sample(sample &s);
 
+        command make_command(command_id id, double param) const;
         response send_cmd(command c) const;
 
         std::string firmware_version();
