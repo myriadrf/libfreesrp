@@ -95,6 +95,14 @@ namespace FreeSRP
         CMD_ENSM_ERR
     };
 
+    enum gainctrl_mode
+    {
+        RF_GAIN_MGC = 0,        // Manual
+        RF_GAIN_FASTATTACK_AGC, // AGC: Fast attack
+        RF_GAIN_SLOWATTACK_AGC, // AGC: Slow attack
+        RF_GAIN_HYBRID_AGC      // AGC: Hybrid
+    };
+
     struct command
     {
         command_id cmd;
