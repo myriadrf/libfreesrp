@@ -17,7 +17,7 @@ int main()
 
         cout << "----TEST CMD----------------------------------------------------------------" << endl;
 
-        cout << srp.send_cmd({SET_RX_LO_FREQ, 1400}) << endl;
+        //cout << srp.send_cmd({SET_RX_LO_FREQ, 1400}) << endl;
         cout << srp.send_cmd({GET_RX_LO_FREQ}) << endl;
         cout << srp.send_cmd({SET_DATAPATH_EN, 1}) << endl;
 
@@ -53,12 +53,28 @@ int main()
 
         cout << "----TEST TX-----------------------------------------------------------------" << endl;
 
-        srp.start_tx();
+        shared_ptr<rx_tx_buf> tx_buf = make_shared<rx_tx_buf>();
+        tx_buf->size = 1024 * 32;
+        for(int i = 0; i < tx_buf->size; i+=4)
+        {
+            uint32_t word = (uint32_t) i/4;
+            memcpy(tx_buf->data.data() + i, &word, sizeof(word));
+            //cout << (int) word << endl;
+        }
+
+        int sent_samples = tx_buf->size;
+        int samples_to_send = sent_samples;
+
+        auto start_tx_time = chrono::system_clock::now();
+
+        srp.tx(tx_buf);
+
+        /*srp.start_tx();
 
         auto start_tx_time = chrono::system_clock::now();
 
         unsigned long sent_samples = 0;
-        const unsigned long samples_to_send = 1024 * 1024 * 40;
+        const unsigned long samples_to_send = 1024 * 1024 * 10;
 
         while(sent_samples < samples_to_send)
         {
@@ -69,13 +85,15 @@ int main()
                 sent_samples++;
             }
         }
-
+        */
         auto duration_tx = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - start_tx_time);
 
         srp.stop_tx();
 
         cout << "Sent " << sent_samples << " / " << samples_to_send << endl;
-        cout << "Sent " << sent_samples << " samples in " << (duration_tx.count() / 1000.0) << " ms (" << ((float) received_samples / (float) duration_tx.count()) << " MSps / " << ((sent_samples * 4) / (float) duration_tx.count()) << " MBps)" << endl;
+        cout << "Sent " << sent_samples << " samples in " << (duration_tx.count() / 1000.0) << " ms (" << ((float) sent_samples / (float) duration_tx.count()) << " MSps / " << ((sent_samples * 4) / (float) duration_tx.count()) << " MBps)" << endl;
+
+        cout << srp.send_cmd({SET_DATAPATH_EN, 0}) << endl;
 
         /* OLD SYNCHRONOUS INTERFACE
         // Test TX
