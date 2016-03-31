@@ -36,6 +36,8 @@
 
 // FreeSRP vendor commands
 #define FREESRP_GET_VERSION_REQ 0
+#define FREESRP_FPGA_CONFIG_LOAD 0xB2
+#define FREESRP_FPGA_CONFIG_STATUS 0xB1
 
 namespace FreeSRP
 {
@@ -139,6 +141,9 @@ namespace FreeSRP
     public:
         FreeSRP();
         ~FreeSRP();
+
+        bool fpga_loaded();
+        bool load_fpga(std::string filename);
 
         std::shared_ptr<rx_tx_buf> rx();
         void tx(std::shared_ptr<rx_tx_buf> buf);
