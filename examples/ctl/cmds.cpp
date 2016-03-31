@@ -36,7 +36,7 @@ namespace cmds
         {"rx_samp", "set receiver sample rate [Hz]", FreeSRP::SET_RX_SAMP_FREQ},
         {"rx_bw", "set receiver bandwidth [Hz]", FreeSRP::SET_RX_RF_BANDWIDTH},
         {"rx_gc", "set receiver gain control mode [??]", FreeSRP::SET_RX_GC_MODE},
-        {"rx_gain", "set receiver gain [milli-dB]", FreeSRP::SET_RX_RF_GAIN},
+        {"rx_gain", "set receiver gain [dB]", FreeSRP::SET_RX_RF_GAIN},
         {"rx_fir_en", "enable/disable receiver FIR filter [enable|disable]", FreeSRP::SET_RX_FIR_EN},
         {"datapath_en", "enable/disable the FDD datapath and turn on/off Rx/Tx [enable|disable]", FreeSRP::SET_DATAPATH_EN}
     };
