@@ -1,6 +1,8 @@
 #include <freesrp.hpp>
 
 #include <cstring>
+#include <fstream>
+#include <vector>
 
 using namespace FreeSRP;
 
@@ -125,8 +127,61 @@ FreeSRP::FreeSRP::~FreeSRP()
 
     if(_ctx != nullptr)
     {
-        libusb_exit(_ctx); //close the session
+        libusb_exit(_ctx); // close the session
     }
+}
+
+bool FreeSRP::FreeSRP::fpga_loaded()
+{
+    std::array<unsigned char, FREESRP_USB_CTRL_SIZE> stat_buf{};
+    int ret = libusb_control_transfer(_freesrp_handle, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE | LIBUSB_ENDPOINT_IN, FREESRP_FPGA_CONFIG_STATUS, 0, 1, stat_buf.data(), (uint16_t) stat_buf.size(), FREESRP_USB_TIMEOUT);
+    if(ret < 0)
+    {
+        throw ConnectionError("FreeSRP not responding: error " + std::to_string(ret));
+    }
+    int transferred = ret;
+    bool fpga_load_success = (bool) stat_buf[0];
+    return fpga_load_success;
+}
+
+bool FreeSRP::FreeSRP::load_fpga(std::string filename)
+{
+    // Open ifstream for FPGA config file
+    std::ifstream stream;
+    stream.exceptions(std::ios::failbit | std::ios::badbit);
+    stream.open(filename, std::ios::binary | std::ios::ate);
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    // Read config into vector
+    std::vector<char> configfile_buffer((size_t) size);
+    if(!stream.read(configfile_buffer.data(), size))
+    {
+        // Could not load config file into buffer
+        throw std::runtime_error("load_fpga error: Could not load FPGA config file into buffer!");
+    }
+
+    // Send FPGA configuration command and tell FreeSRP the configuration file length
+    std::array<unsigned char, 16> data{};
+    uint32_t configfile_length = static_cast<uint32_t>(size);
+    memcpy(data.data(), &configfile_length, sizeof(configfile_length));
+
+    int ret = libusb_control_transfer(_freesrp_handle, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE | LIBUSB_ENDPOINT_OUT, FREESRP_FPGA_CONFIG_LOAD, 0, 1, data.data(), (uint16_t) data.size(), FREESRP_USB_TIMEOUT);
+    if(ret < 0)
+    {
+        throw ConnectionError("FreeSRP not responding: error " + std::to_string(ret));
+    }
+
+    // Transfer the configuration
+    int transferred;
+    ret = libusb_bulk_transfer(_freesrp_handle, FREESRP_FPGA_UART_OUT, (unsigned char *) configfile_buffer.data(), (int) configfile_buffer.size(), &transferred, FREESRP_USB_TIMEOUT);
+    if(ret < 0)
+    {
+        throw ConnectionError("BULK OUT transfer of FPGA configuration failed! error " + std::to_string(ret));
+    }
+
+    // Get FreeSRP FPGA configuration status
+    return fpga_loaded();
 }
 
 std::shared_ptr<rx_tx_buf> FreeSRP::FreeSRP::rx()
