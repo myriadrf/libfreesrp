@@ -30,6 +30,10 @@ add_library(
     ${LIBFREESRP_INCLUDE_FILES}
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("-- WARNING: Configured in DEBUG mode. This will *very heavily* impact performance!")
+endif()
+
 target_link_libraries(freesrp ${LIBUSB_1_LIBRARIES})
 
 # Examples
@@ -52,3 +56,6 @@ target_link_libraries(freesrp-ctl freesrp)
 install(TARGETS freesrp LIBRARY DESTINATION lib)
 install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
 install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)
+
+# Install freesrp-ctl utility
+install(TARGETS freesrp-ctl RUNTIME DESTINATION bin)
