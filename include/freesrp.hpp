@@ -106,6 +106,13 @@ namespace FreeSRP
         RF_GAIN_HYBRID_AGC      // AGC: Hybrid
     };
 
+    enum fpga_status
+    {
+        FPGA_CONFIG_DONE = 0,
+        FPGA_CONFIG_ERROR,
+        FPGA_CONFIG_SKIPPED
+    };
+
     struct command
     {
         command_id cmd;
@@ -144,7 +151,7 @@ namespace FreeSRP
         ~FreeSRP();
 
         bool fpga_loaded();
-        bool load_fpga(std::string filename);
+        fpga_status load_fpga(std::string filename);
 
         std::shared_ptr<rx_tx_buf> rx();
         void tx(std::shared_ptr<rx_tx_buf> buf);

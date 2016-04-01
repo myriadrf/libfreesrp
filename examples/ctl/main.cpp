@@ -125,15 +125,17 @@ int main(int argc, char *argv[])
         if(fpgaconfig_filename.length() > 0)
         {
             cout << "Loading FPGA with '" << fpgaconfig_filename << "'" << endl;
-            if(srp.load_fpga(fpgaconfig_filename))
+            switch(srp.load_fpga(fpgaconfig_filename))
             {
-                // FPGA loaded successfully
-                cout << "FPGA configured successfully" << endl;
-            }
-            else
-            {
-                // Error configuring FPGA
-                cout << "Could not configure FPGA" << endl;
+                case FPGA_CONFIG_DONE:
+                    cout << "FPGA configured successfully" << endl;
+                    break;
+                case FPGA_CONFIG_ERROR:
+                    cout << "Error configuring FPGA!" << endl;
+                    break;
+                case FPGA_CONFIG_SKIPPED:
+                    cout << "FPGA already configured. To re-configure, please restart the FreeSRP." << endl;
+                    break;
             }
         }
 

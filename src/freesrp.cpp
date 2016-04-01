@@ -144,8 +144,14 @@ bool FreeSRP::FreeSRP::fpga_loaded()
     return fpga_load_success;
 }
 
-bool FreeSRP::FreeSRP::load_fpga(std::string filename)
+fpga_status FreeSRP::FreeSRP::load_fpga(std::string filename)
 {
+    if(fpga_loaded())
+    {
+        // FreeSRP does not yet handle reloading the FPGA multiple times
+        return FPGA_CONFIG_SKIPPED;
+    }
+
     // Open ifstream for FPGA config file
     std::ifstream stream;
     stream.exceptions(std::ios::failbit | std::ios::badbit);
@@ -180,6 +186,8 @@ bool FreeSRP::FreeSRP::load_fpga(std::string filename)
         throw ConnectionError("BULK OUT transfer of FPGA configuration failed! error " + std::to_string(ret));
     }
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     // Get FreeSRP FPGA configuration status and switch to normal operation
     if(fpga_loaded())
     {
@@ -189,13 +197,15 @@ bool FreeSRP::FreeSRP::load_fpga(std::string filename)
         {
             throw ConnectionError("FreeSRP not responding: error " + std::to_string(ret));
         }
-        transferred = ret;
-        bool finish_success = (bool) finish_buf[0];
-        return finish_success;
+
+        if(finish_buf[0])
+        {
+            return FPGA_CONFIG_DONE;
+        }
     }
     else
     {
-        return false;
+        return FPGA_CONFIG_ERROR;
     }
 }
 
