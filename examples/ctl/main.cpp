@@ -74,16 +74,19 @@ bool process_command(const FreeSRP::FreeSRP &srp)
     return !exit;
 }
 
-enum optionIndex {NONE, HELP, FPGA};
+enum optionIndex {NONE, HELP, INTERACTIVE, FPGA, FX3};
 const option::Descriptor usage[] = {
-    {NONE, 0, "", "",       option::Arg::None,      "usage: freesrp-ctl [options]\noptions:"},
-    {HELP, 0, "", "help",   option::Arg::None,      "  --help                           Print usage and exit."},
-    {FPGA, 0, "", "fpga",   option::Arg::Optional,  "  --fpga=/path/to/bitstream.bin    Load the FPGA with the specified bitstream"},
+    {NONE,        0, "",  "",       option::Arg::None,      "usage: freesrp-ctl [options]\noptions:"},
+    {HELP,        0, "",  "help",   option::Arg::None,      "  --help                           Print usage and exit"},
+    {INTERACTIVE, 0, "i", "interactive", option::Arg::None, "  --interactive, -i                Run in interactive mode"},
+    {FPGA,        0, "",  "fpga",   option::Arg::Optional,  "  --fpga=/path/to/bitstream.bin    Load the FPGA with the specified bitstream"},
+    {FX3,         0, "",  "fx3",    option::Arg::Optional,  "  --fx3=/path/to/firmware.img      Upload firmware to a Cypress EZ-USB FX3"},
     {0,0,0,0,0,0}
 };
 
 int main(int argc, char *argv[])
 {
+    // Parse options
     argc-=(argc>0); argv+=(argc>0); // Skip program name (argv[0]), if present
     option::Stats stats(usage, argc, argv);
     option::Option options[stats.options_max], buffer[stats.buffer_max];
@@ -110,11 +113,56 @@ int main(int argc, char *argv[])
         }
         else
         {
-            cout << "Error: --fpga option expects a filename! See 'freesrp-ctl --help'." << endl;
+            cerr << "Error: --fpga option expects a filename! See 'freesrp-ctl --help'." << endl;
             return 1;
         }
     }
 
+    bool interactive = false;
+    if(options[INTERACTIVE])
+    {
+        interactive = true;
+    }
+
+    std::string fx3_firmware = "";
+
+    if(options[FX3])
+    {
+        if(options[FX3].arg)
+        {
+            fx3_firmware = options[FX3].arg;
+        }
+        else
+        {
+            cerr << "Error: --fx3 option expects a filename! See 'freesrp-ctl --help'." << endl;
+        }
+    }
+
+    if(fx3_firmware.length() > 0)
+    {
+        // Upload firmware to FX3.
+        try
+        {
+            if(Util::find_fx3(true, fx3_firmware))
+            {
+                // Firmware upload succeeded, continue
+                cout << "Sucessfully uploaded FreeSRP firmware to FX3" << endl;
+                this_thread::sleep_for(chrono::milliseconds(600));
+            }
+            else
+            {
+                cerr << "Firmware upload to FX3 failed!" << endl;
+                return 1;
+            }
+        }
+        catch(const runtime_error &e)
+        {
+            cerr << "Error while uploading firmware to FX3! " << e.what() << endl;
+            return 1;
+        }
+    }
+
+    // Connect to FreeSRP and start interactive mode if requested
     try
     {
         FreeSRP::FreeSRP srp;
@@ -147,8 +195,11 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        cout << "Type 'help' for a list of valid commands." << endl;
-        while(process_command(srp)) {}
+        if(interactive)
+        {
+            cout << "Type 'help' for a list of valid commands." << endl;
+            while(process_command(srp)) {}
+        }
     }
     catch(const ConnectionError &e)
     {
@@ -157,6 +208,13 @@ int main(int argc, char *argv[])
     catch(const runtime_error &e)
     {
         cerr << "Unexpected exception occurred! " << e.what() << endl;
+    }
+
+    // Check for FX3
+    if(Util::find_fx3())
+    {
+        cout << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
+                "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
     }
 
     return 0;

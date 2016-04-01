@@ -14,10 +14,10 @@
 
 #include <readerwriterqueue/readerwriterqueue.h>
 
-//#define FREESRP_VENDOR_ID 0xe1ec
-//#define FREESRP_PRODUCT_ID 0xf5d0
-#define FREESRP_VENDOR_ID 0x04b4
-#define FREESRP_PRODUCT_ID 0x00f0
+#define FREESRP_VENDOR_ID 0xe1ec
+#define FREESRP_PRODUCT_ID 0xf5d0
+#define FX3_VENDOR_ID 0x04b4
+#define FX3_PRODUCT_ID 0x00f3
 
 #define FREESRP_USB_TIMEOUT 4000
 
@@ -195,6 +195,17 @@ namespace FreeSRP
 
         static moodycamel::ReaderWriterQueue<sample> _rx_buf;
         static moodycamel::ReaderWriterQueue<sample> _tx_buf;
+    };
+
+    namespace Util
+    {
+        /*
+         * This will look for an FX3 in bootloader mode.
+         * upload_firmware: If 'false', this function will return 'true' if an unprogrammed FX3 is found.
+         *                  If 'true', it will attempt to program the FX3 with the specified firmware.
+         * filename: Path to the image file to program the FX3 with.
+         */
+        bool find_fx3(bool upload_firmware=false, std::string filename="");
     };
 }
 
