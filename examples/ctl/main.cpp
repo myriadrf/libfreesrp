@@ -166,8 +166,7 @@ int main(int argc, char *argv[])
     try
     {
         FreeSRP::FreeSRP srp;
-        cout << "Connected to FreeSRP" << endl;
-        cout << "Version: " << srp.firmware_version() << endl;
+        cout << "Found FreeSRP" << endl;
 
         // Configure FPGA if bitstream specified
         if(fpgaconfig_filename.length() > 0)
@@ -194,6 +193,9 @@ int main(int argc, char *argv[])
             cout << "Example: freesrp-ctl --fpga=/path/to/bitstream.bin" << endl;
             return 1;
         }
+
+        cout << "Connected to FreeSRP" << endl;
+        cout << "Version: " << srp.version() << endl;
 
         if(interactive)
         {

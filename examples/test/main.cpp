@@ -13,7 +13,7 @@ int main()
     try
     {
         FreeSRP::FreeSRP srp;
-        cout << "firmware version is " << srp.firmware_version() << endl;
+        cout << "version: " << srp.version() << endl;
 
         cout << "----TEST CMD----------------------------------------------------------------" << endl;
 

@@ -89,6 +89,7 @@ namespace FreeSRP
         GET_RX_FIR_EN, 			/* 21:            -> [UINT8_T] */
         SET_RX_FIR_EN, 			/* 22: [UINT8_T]  -> [UINT8_T] */
         SET_DATAPATH_EN, 		/* 23: [UINT8_T]  -> [UINT8_T] */
+        GET_FPGA_VERSION,       /* 24:            -> [UINT64_T] */
     };
 
     enum command_err
@@ -111,6 +112,17 @@ namespace FreeSRP
         FPGA_CONFIG_DONE = 0,
         FPGA_CONFIG_ERROR,
         FPGA_CONFIG_SKIPPED
+    };
+
+    struct freesrp_version
+    {
+        std::string fx3;
+        std::string fpga;
+
+        friend std::ostream &operator<<(std::ostream &o, const freesrp_version v)
+        {
+            return o << "FX3 v" << v.fx3 << ", FPGA v" << v.fpga;
+        }
     };
 
     struct command
@@ -170,7 +182,7 @@ namespace FreeSRP
         command make_command(command_id id, double param) const;
         response send_cmd(command c) const;
 
-        std::string firmware_version();
+        freesrp_version version();
     private:
         void run_rx_tx();
 
@@ -185,7 +197,7 @@ namespace FreeSRP
         libusb_context *_ctx = nullptr;
         libusb_device_handle *_freesrp_handle = nullptr;
 
-        std::string _freesrp_fw_version;
+        std::string _fx3_fw_version;
 
         std::atomic<bool> _run_rx_tx{false};
         std::unique_ptr<std::thread> _rx_tx_worker;

@@ -73,7 +73,7 @@ FreeSRP::FreeSRP::FreeSRP()
         throw ConnectionError("FreeSRP not responding: error " + std::to_string(ret));
     }
     int transferred = ret;
-    _freesrp_fw_version = std::string(std::begin(data), std::begin(data) + transferred);
+    _fx3_fw_version = std::string(std::begin(data), std::begin(data) + transferred);
 
     for(int i = 0; i < _rx_transfers.size(); i++)
     {
@@ -593,7 +593,16 @@ response FreeSRP::FreeSRP::send_cmd(command cmd) const
     return res;
 }
 
-std::string FreeSRP::FreeSRP::firmware_version()
+freesrp_version FreeSRP::FreeSRP::version()
 {
-    return _freesrp_fw_version;
+    response res = send_cmd({GET_FPGA_VERSION});
+    uint8_t fpga_major_version = ((uint8_t*) &res.param)[0];
+    uint8_t fpga_minor_version = ((uint8_t*) &res.param)[1];
+    uint8_t fpga_patch_version = ((uint8_t*) &res.param)[2];
+
+    freesrp_version v;
+    v.fx3 = _fx3_fw_version;
+    v.fpga = std::to_string(fpga_major_version) + "." + std::to_string(fpga_minor_version) + "." + std::to_string(fpga_patch_version);
+
+    return v;
 }
