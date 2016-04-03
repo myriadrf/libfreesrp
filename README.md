@@ -18,7 +18,7 @@ On Ubuntu 14.04, this is how to build and install the library and its dependenci
 sudo apt-get install build-essential cmake libusb-1.0-0-dev libboost-all-dev
 
 # Get the latest libfreesrp source code
-git clone https://lukaslaobeyer@bitbucket.org/freesrp/libfreesrp.git
+git clone https://github.com/FreeSRP/libfreesrp.git
 
 # Build the library
 cd libfreesrp
