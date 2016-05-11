@@ -91,6 +91,7 @@ namespace FreeSRP
         SET_RX_FIR_EN, 			/* 22: [UINT8_T]  -> [UINT8_T] */
         SET_DATAPATH_EN, 		/* 23: [UINT8_T]  -> [UINT8_T] */
         GET_FPGA_VERSION,       /* 24:            -> [UINT64_T] */
+        SET_LOOPBACK_EN,        /* 25: [UINT8_T]  -> [UINT8_T] */
     };
 
     enum command_err

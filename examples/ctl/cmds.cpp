@@ -31,14 +31,15 @@ namespace cmds
         {"tx_samp", "set transmitter sample rate [Hz]", FreeSRP::SET_TX_SAMP_FREQ},
         {"tx_bw", "set transmitter bandwidth [Hz]", FreeSRP::SET_TX_RF_BANDWIDTH},
         {"tx_atten", "set transmitter attenuation [milli-dB]", FreeSRP::SET_TX_ATTENUATION},
-        {"tx_fir_en", "enable/disable transmitter FIR filter [enable|disable]", FreeSRP::SET_TX_FIR_EN},
+        {"tx_fir_en", "enable/disable transmitter FIR filter [1|0]", FreeSRP::SET_TX_FIR_EN},
         {"rx_lo", "set receiver local oscillator frequency [Hz]", FreeSRP::SET_RX_LO_FREQ},
         {"rx_samp", "set receiver sample rate [Hz]", FreeSRP::SET_RX_SAMP_FREQ},
         {"rx_bw", "set receiver bandwidth [Hz]", FreeSRP::SET_RX_RF_BANDWIDTH},
         {"rx_gc", "set receiver gain control mode [??]", FreeSRP::SET_RX_GC_MODE},
         {"rx_gain", "set receiver gain [dB]", FreeSRP::SET_RX_RF_GAIN},
-        {"rx_fir_en", "enable/disable receiver FIR filter [enable|disable]", FreeSRP::SET_RX_FIR_EN},
-        {"datapath_en", "enable/disable the FDD datapath and turn on/off Rx/Tx [enable|disable]", FreeSRP::SET_DATAPATH_EN}
+        {"rx_fir_en", "enable/disable receiver FIR filter [1|0]", FreeSRP::SET_RX_FIR_EN},
+        {"datapath_en", "enable/disable the FDD datapath and turn on/off Rx/Tx [1|0]", FreeSRP::SET_DATAPATH_EN},
+        {"loopback_en", "enable/disable the AD9364's internal loopback mode [1|0]", FreeSRP::SET_LOOPBACK_EN}
     };
 
     const vector<param_def> get_params = {
@@ -46,13 +47,13 @@ namespace cmds
         {"tx_samp", "get transmitter sample rate [Hz]", FreeSRP::GET_TX_SAMP_FREQ},
         {"tx_bw", "get transmitter bandwidth [Hz]", FreeSRP::GET_TX_RF_BANDWIDTH},
         {"tx_atten", "get transmitter attenuation [milli-dB]", FreeSRP::GET_TX_ATTENUATION},
-        {"tx_fir_en", "get transmitter FIR filter status [enabled|disabled]", FreeSRP::GET_TX_FIR_EN},
+        {"tx_fir_en", "get transmitter FIR filter status [1|0]", FreeSRP::GET_TX_FIR_EN},
         {"rx_lo", "get receiver local oscillator frequency [Hz]", FreeSRP::GET_RX_LO_FREQ},
         {"rx_samp", "get receiver sample rate [Hz]", FreeSRP::GET_RX_SAMP_FREQ},
         {"rx_bw", "get receiver bandwidth [Hz]", FreeSRP::GET_RX_RF_BANDWIDTH},
         {"rx_gc", "get receiver gain control mode [??]", FreeSRP::GET_RX_GC_MODE},
         {"rx_gain", "get receiver gain [milli-dB]", FreeSRP::GET_RX_RF_GAIN},
-        {"rx_fir_en", "get receiver FIR filter status [enabled|disabled]", FreeSRP::GET_RX_FIR_EN}
+        {"rx_fir_en", "get receiver FIR filter status [1|0]", FreeSRP::GET_RX_FIR_EN}
     };
 
     int cmd_set(const FreeSRP::FreeSRP &srp, vector<string> &params)
