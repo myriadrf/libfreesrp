@@ -186,7 +186,7 @@ fpga_status FreeSRP::FreeSRP::load_fpga(std::string filename)
         throw ConnectionError("BULK OUT transfer of FPGA configuration failed! error " + std::to_string(ret));
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     // Get FreeSRP FPGA configuration status and switch to normal operation
     if(fpga_loaded())
@@ -197,6 +197,8 @@ fpga_status FreeSRP::FreeSRP::load_fpga(std::string filename)
         {
             throw ConnectionError("FreeSRP not responding: error " + std::to_string(ret));
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         if(finish_buf[0])
         {
@@ -427,9 +429,14 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
         int success = _tx_buf.try_dequeue(s);
         if(!success)
         {
-            std::cerr << "Warning: TX packet not filled completely. Something weird is going on..." << std::endl;
-            transfer->length = i;
-            break;
+            //std::cerr << "Warning: TX packet not filled completely. Something weird is going on..." << std::endl;
+            //transfer->length = i;
+            //break;
+
+            // TODO: Notify of this? Do something else?
+            // No data available, fill with zeros
+            s.i = 0.0f;
+            s.q = 0.0f;
         }
 
         // Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
