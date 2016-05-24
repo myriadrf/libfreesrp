@@ -2,12 +2,13 @@
 
 #include <cstring>
 #include <fstream>
-#include <vector>
 
 using namespace FreeSRP;
 
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(LIB_RX_TX_BUF_SIZE);
+std::vector<sample> FreeSRP::FreeSRP::_rx_buf_custom_callback(FREESRP_RX_TX_BUF_SIZE / 4);
+std::function<void(const std::vector<sample> &)> FreeSRP::FreeSRP::_rx_custom_callback;
 
 FreeSRP::FreeSRP::FreeSRP()
 {
@@ -299,11 +300,23 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
             s.i = (float) signed_i / 2048.0f;
             s.q = (float) signed_q / 2048.0f;
 
-            bool success = _rx_buf.try_enqueue(s);
-            if(!success)
+            if(_rx_custom_callback)
             {
-                // TODO: overflow! handle this
+                _rx_buf_custom_callback.push_back(s);
             }
+            else
+            {
+                bool success = _rx_buf.try_enqueue(s);
+                if(!success)
+                {
+                    // TODO: overflow! handle this
+                }
+            }
+        }
+
+        if(_rx_custom_callback)
+        {
+            _rx_custom_callback(_rx_buf_custom_callback);
         }
     }
     else
@@ -364,6 +377,12 @@ void FreeSRP::FreeSRP::start_rx()
             throw ConnectionError("Could not submit RX transfer. libusb error: " + std::to_string(ret));
         }
     }
+}
+
+void FreeSRP::FreeSRP::start_rx(std::function<void(const std::vector<sample> &)> rx_callback)
+{
+    _rx_custom_callback = rx_callback;
+    start_rx();
 }
 
 void FreeSRP::FreeSRP::stop_rx()

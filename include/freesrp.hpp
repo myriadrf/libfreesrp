@@ -3,11 +3,13 @@
 
 #include <string>
 #include <array>
+#include <vector>
 #include <stdexcept>
 #include <iostream>
 #include <memory>
 #include <atomic>
 #include <thread>
+#include <functional>
 #include <cstdint>
 
 #include <libusb.h>
@@ -171,6 +173,7 @@ namespace FreeSRP
         void tx(std::shared_ptr<rx_tx_buf> buf);
 
         void start_rx();
+        void start_rx(std::function<void(const std::vector<sample> &)> rx_callback);
         void stop_rx();
 
         void start_tx();
@@ -206,6 +209,9 @@ namespace FreeSRP
 
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
+
+        static std::function<void(const std::vector<sample> &)> _rx_custom_callback;
+        static std::vector<sample> _rx_buf_custom_callback;
 
         static moodycamel::ReaderWriterQueue<sample> _rx_buf;
         static moodycamel::ReaderWriterQueue<sample> _tx_buf;

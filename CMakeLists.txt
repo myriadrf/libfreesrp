@@ -44,6 +44,16 @@ set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/test/main.cpp)
 add_executable(freesrp-test ${EXAMPLE_TEST_SOURCE_FILES})
 target_link_libraries(freesrp-test freesrp)
 
+# Performance test app
+set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/perftests/main.cpp)
+add_executable(freesrp-perftests ${EXAMPLE_TEST_SOURCE_FILES})
+target_link_libraries(freesrp-perftests freesrp)
+
+# freesrp-rec
+set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec/main.cpp)
+add_executable(freesrp-rec ${EXAMPLE_TEST_SOURCE_FILES})
+target_link_libraries(freesrp-rec freesrp)
+
 # freesrp-ctl
 file(GLOB_RECURSE FREESRP_CTL_FILES
     ${PROJECT_SOURCE_DIR}/examples/ctl/*.hpp
@@ -57,5 +67,5 @@ install(TARGETS freesrp LIBRARY DESTINATION lib)
 install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
 install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)
 
-# Install freesrp-ctl utility
-install(TARGETS freesrp-ctl RUNTIME DESTINATION bin)
+# Install freesrp-ctl and freesrp-rec utilities
+install(TARGETS freesrp-ctl freesrp-rec RUNTIME DESTINATION bin)
