@@ -43,8 +43,8 @@ void rx_callback(const vector<sample>& rx_buf)
 {
     for(sample s : rx_buf)
     {
-        _out->write((char *) &s.i, sizeof(s.i));
-        _out->write((char *) &s.q, sizeof(s.q));
+        _out->write(reinterpret_cast<char *>(&s.i), sizeof(s.i));
+        _out->write(reinterpret_cast<char *>(&s.q), sizeof(s.q));
     }
 }
 
@@ -91,11 +91,11 @@ int main(int argc, char *argv[])
     }
 
     streambuf *of_buf;
+    ofstream of;
 
     if(options[OUTFILE] && options[OUTFILE].arg)
     {
         string outfile = options[OUTFILE].arg;
-        ofstream of;
 
         if(outfile == "-")
         {
@@ -235,6 +235,10 @@ int main(int argc, char *argv[])
 
         // Disable signal chain
         stop(srp);
+
+        _out->flush();
+
+        cout << endl << "Stopped." << endl;
 
         return 0;
     }

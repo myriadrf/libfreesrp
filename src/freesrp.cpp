@@ -300,24 +300,24 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
             s.i = (float) signed_i / 2048.0f;
             s.q = (float) signed_q / 2048.0f;
 
-            if(_rx_custom_callback)
-            {
-                _rx_buf_custom_callback.push_back(s);
-            }
-            else
-            {
+            // TODO: if(_rx_custom_callback)
+            //{
+            //    _rx_buf_custom_callback.push_back(s);
+            //}
+            //else
+            //{
                 bool success = _rx_buf.try_enqueue(s);
                 if(!success)
                 {
                     // TODO: overflow! handle this
                 }
-            }
+            //}
         }
 
-        if(_rx_custom_callback)
-        {
-            _rx_custom_callback(_rx_buf_custom_callback);
-        }
+        // TODO: if(_rx_custom_callback)
+        //{
+        //    _rx_custom_callback(_rx_buf_custom_callback);
+        //}
     }
     else
     {
