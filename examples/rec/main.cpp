@@ -2,6 +2,7 @@
 #include <fstream>
 #include <mutex>
 #include <condition_variable>
+#include <ctime>
 #include <boost/lexical_cast.hpp>
 
 #include <freesrp.hpp>
@@ -39,14 +40,14 @@ void sigint_callback(int s)
     _interrupt.notify_all();
 }
 
-void rx_callback(const vector<sample>& rx_buf)
+/*void rx_callback(const vector<sample>& rx_buf)
 {
     for(sample s : rx_buf)
     {
         _out->write((char *) &s.i, sizeof(s.i));
         _out->write((char *) &s.q, sizeof(s.q));
     }
-}
+}*/
 
 void start(FreeSRP::FreeSRP &srp)
 {
@@ -57,7 +58,7 @@ void start(FreeSRP::FreeSRP &srp)
         throw runtime_error("Error enabling FreeSRP datapath!");
     }
 
-    srp.start_rx(rx_callback);
+    srp.start_rx();
 }
 
 void stop(FreeSRP::FreeSRP &srp)
@@ -222,6 +223,43 @@ int main(int argc, char *argv[])
         // Enable signal chain and start receiving samples
         start(srp);
 
+        volatile bool run = true;
+        int rate_probe_counter = 0;
+        int rate_probe_counter_comp = 1000000;
+        time_t current = 0, previous = 0;
+
+        thread rx([&]() {
+            sample s;
+
+            while(run)
+            {
+                if(srp.get_rx_sample(s))
+                {
+                    //_out->write((char *) &s.i, sizeof(s.i));
+                    //_out->write((char *) &s.q, sizeof(s.q));
+                    rate_probe_counter++;
+
+                    if(rate_probe_counter == rate_probe_counter_comp)
+                    {
+                        rate_probe_counter = 0;
+
+                        if(previous == 0)
+                        {
+                            previous = time(nullptr);
+                        }
+                        else
+                        {
+                            current = time(nullptr);
+                            time_t elapsed = current - previous;
+                            previous = current;
+
+                            cout << ((double) rate_probe_counter_comp) / ((double) elapsed) / 1e6 << "MSps" << endl;
+                        }
+                    }
+                }
+            }
+        });
+
         // Wait for Control-C
         struct sigaction sigint_handler;
         sigint_handler.sa_handler = sigint_callback;
@@ -235,6 +273,8 @@ int main(int argc, char *argv[])
 
         // Disable signal chain
         stop(srp);
+        run = false;
+        rx.join();
 
         return 0;
     }
