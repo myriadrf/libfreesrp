@@ -2,7 +2,7 @@
 #include <fstream>
 #include <mutex>
 #include <condition_variable>
-#include <ctime>
+#include <chrono>
 #include <boost/lexical_cast.hpp>
 
 #include <freesrp.hpp>
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <iomanip>
 
 using namespace std;
 using namespace FreeSRP;
@@ -39,15 +40,6 @@ void sigint_callback(int s)
 {
     _interrupt.notify_all();
 }
-
-/*void rx_callback(const vector<sample>& rx_buf)
-{
-    for(sample s : rx_buf)
-    {
-        _out->write(reinterpret_cast<char *>(&s.i), sizeof(s.i));
-        _out->write(reinterpret_cast<char *>(&s.q), sizeof(s.q));
-    }
-}*/
 
 void start(FreeSRP::FreeSRP &srp)
 {
@@ -129,7 +121,7 @@ int main(int argc, char *argv[])
         }
         catch(boost::bad_lexical_cast)
         {
-            cout << "Error: Please specify valid numerical values" << endl;
+            cerr << "Error: Please specify valid numerical values" << endl;
             return 1;
         }
     }
@@ -158,22 +150,22 @@ int main(int argc, char *argv[])
     try
     {
         FreeSRP::FreeSRP srp;
-        cout << "Found FreeSRP" << endl;
+        cerr << "Found FreeSRP" << endl;
 
         // Configure FPGA if bitstream specified
         if(fpgaconfig_filename.length() > 0)
         {
-            cout << "Loading FPGA with '" << fpgaconfig_filename << "'" << endl;
+            cerr << "Loading FPGA with '" << fpgaconfig_filename << "'" << endl;
             switch(srp.load_fpga(fpgaconfig_filename))
             {
             case FPGA_CONFIG_DONE:
-                cout << "FPGA configured successfully" << endl;
+                cerr << "FPGA configured successfully" << endl;
                 break;
             case FPGA_CONFIG_ERROR:
-                cout << "Error configuring FPGA!" << endl;
+                cerr << "Error configuring FPGA!" << endl;
                 break;
             case FPGA_CONFIG_SKIPPED:
-                cout << "FPGA already configured. To re-configure, please restart the FreeSRP." << endl;
+                cerr << "FPGA already configured. To re-configure, please restart the FreeSRP." << endl;
                 break;
             }
         }
@@ -181,13 +173,13 @@ int main(int argc, char *argv[])
         // Check FPGA status
         if(!srp.fpga_loaded())
         {
-            cout << "FPGA not configured. Please configure the FPGA first: " << endl;
-            cout << "Example: freesrp-rec --fpga=/path/to/bitstream.bin" << endl;
+            cerr << "FPGA not configured. Please configure the FPGA first: " << endl;
+            cerr << "Example: freesrp-rec --fpga=/path/to/bitstream.bin" << endl;
             return 1;
         }
 
-        cout << "Connected to FreeSRP" << endl;
-        cout << "Version: " << srp.version() << endl;
+        cerr << "Connected to FreeSRP" << endl;
+        cerr << "Version: " << srp.version() << endl;
 
         // Set center frequency
         response r = srp.send_cmd(srp.make_command(SET_RX_LO_FREQ, center_freq));
@@ -224,9 +216,9 @@ int main(int argc, char *argv[])
         start(srp);
 
         volatile bool run = true;
-        int rate_probe_counter = 0;
-        int rate_probe_counter_comp = 1000000;
-        time_t current = 0, previous = 0;
+        long rate_probe_counter = 0;
+        long rate_probe_counter_comp = 10000000;
+        time_t current_ms = 0, previous_ms = 0;
 
         thread rx([&]() {
             sample s;
@@ -235,25 +227,26 @@ int main(int argc, char *argv[])
             {
                 if(srp.get_rx_sample(s))
                 {
-                    //_out->write((char *) &s.i, sizeof(s.i));
-                    //_out->write((char *) &s.q, sizeof(s.q));
+                    _out->write(reinterpret_cast<char *>(&s.i), sizeof(s.i));
+                    _out->write(reinterpret_cast<char *>(&s.q), sizeof(s.q));
+
                     rate_probe_counter++;
 
                     if(rate_probe_counter == rate_probe_counter_comp)
                     {
                         rate_probe_counter = 0;
 
-                        if(previous == 0)
+                        if(previous_ms == 0)
                         {
-                            previous = time(nullptr);
+                            previous_ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
                         }
                         else
                         {
-                            current = time(nullptr);
-                            time_t elapsed = current - previous;
-                            previous = current;
+                            current_ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();;
+                            time_t elapsed_ms = current_ms - previous_ms;
+                            previous_ms = current_ms;
 
-                            cout << ((double) rate_probe_counter_comp) / ((double) elapsed) / 1e6 << "MSps" << endl;
+                            cerr << fixed << setprecision(4) << ((double) rate_probe_counter_comp) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
                         }
                     }
                 }
@@ -267,6 +260,7 @@ int main(int argc, char *argv[])
         sigint_handler.sa_flags = 0;
 
         sigaction(SIGINT, &sigint_handler, NULL);
+        sigaction(SIGPIPE, &sigint_handler, NULL);
 
         unique_lock<mutex> lck(_interrupt_mut);
         _interrupt.wait(lck);
@@ -278,7 +272,7 @@ int main(int argc, char *argv[])
 
         _out->flush();
 
-        cout << endl << "Stopped." << endl;
+        cerr << endl << "Stopped." << endl;
 
         return 0;
     }
@@ -294,7 +288,7 @@ int main(int argc, char *argv[])
     // Check for FX3
     if(Util::find_fx3())
     {
-        cout << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
+        cerr << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
                 "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
     }
 
