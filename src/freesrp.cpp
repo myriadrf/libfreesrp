@@ -237,7 +237,7 @@ void FreeSRP::FreeSRP::tx(std::shared_ptr<rx_tx_buf> rx_data)
     }
     if(transferred != rx_data->size)
     {
-        throw ConnectionError("Wrong amount of data tranferred! Available: " + std::to_string(rx_data->size) + "; transferred: " + std::to_string(transferred));
+        throw ConnectionError("Wrong amount of data transferred! Available: " + std::to_string(rx_data->size) + "; transferred: " + std::to_string(transferred));
     }
 }
 
@@ -351,7 +351,10 @@ void FreeSRP::FreeSRP::tx_callback(libusb_transfer* transfer)
     else
     {
         // TODO: Handle error
-        std::cerr << "tranfer error with status " << transfer->status << std::endl;
+        if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
+        {
+            std::cerr << "transfer error with status " << transfer->status << std::endl;
+        }
     }
 
     // Resubmit the transfer with new data
@@ -363,7 +366,7 @@ void FreeSRP::FreeSRP::tx_callback(libusb_transfer* transfer)
         if(ret < 0)
         {
             // TODO: Handle error
-            std::cerr << "tranfer submission error with status " << transfer->status << std::endl;
+            std::cerr << "transfer submission error with status " << transfer->status << std::endl;
         }
     }
 }
