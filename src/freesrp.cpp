@@ -460,9 +460,9 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
             s.q = 0;
         }
 
-        // Convert -32768 to 32767 16-bit sample value to signed 16-bit int with range -2048 to 2048
-        int16_t signed_i = s.i / (int16_t) 16;
-        int16_t signed_q = s.q / (int16_t) 16;
+        // SLIP THIS: Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
+        int16_t signed_i = s.i;
+        int16_t signed_q = s.q;
 
         // Unsigned 16-bit ints holding the two's-complement 12-bit sample values
         uint16_t raw_i;
