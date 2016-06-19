@@ -295,10 +295,12 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
                 signed_q = raw_q;
             }
 
-            // Convert the signed integers (range -2048 to 2047) to floats (range -1 to 1)
+            // SKIP THIS: Convert the signed integers (range -2048 to 2047) to floats (range -1 to 1)
             sample s;
-            s.i = (float) signed_i / 2048.0f;
-            s.q = (float) signed_q / 2048.0f;
+            //s.i = (float) signed_i / 2048.0f;
+            //s.q = (float) signed_q / 2048.0f;
+            s.i = signed_i;
+            s.q = signed_q;
 
             // TODO: if(_rx_custom_callback)
             //{
@@ -454,13 +456,13 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
 
             // TODO: Notify of this? Do something else?
             // No data available, fill with zeros
-            s.i = 0.0f;
-            s.q = 0.0f;
+            s.i = 0;
+            s.q = 0;
         }
 
-        // Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
-        int16_t signed_i = (int16_t) (s.i * 2047.0f);
-        int16_t signed_q = (int16_t) (s.q * 2047.0f);
+        // Convert -32768 to 32767 16-bit sample value to signed 16-bit int with range -2048 to 2048
+        int16_t signed_i = s.i / (int16_t) 16;
+        int16_t signed_q = s.q / (int16_t) 16;
 
         // Unsigned 16-bit ints holding the two's-complement 12-bit sample values
         uint16_t raw_i;

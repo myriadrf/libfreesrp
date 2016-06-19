@@ -20,7 +20,8 @@ using namespace FreeSRP;
 
 enum optionIndex {NONE, HELP, OUTFILE, FPGA, CENTER_FREQ, BANDWIDTH, GAIN};
 const option::Descriptor usage[] = {
-        {NONE,        0, "",  "",            option::Arg::None,      "usage: freesrp-rec [options] -ofilename\noptions:"},
+        {NONE,        0, "",  "",            option::Arg::None,      "usage: freesrp-rec [options] -ofilename\n"
+                                                                     "       output format is complex signed 16-bit\noptions:"},
         {HELP,        0, "h", "help",        option::Arg::None,      "  -h, --help                     Print usage and exit"},
         {OUTFILE,     0, "o", "out",         option::Arg::Optional,  "  -o[filename], --out=[filename] Output to specified file ('-o-' for stdout)"},
         {FPGA,        0, "",  "fpga",        option::Arg::Optional,  "  --fpga=/path/to/bitstream.bin  Load the FPGA with the specified bitstream"},
@@ -218,17 +219,31 @@ int main(int argc, char *argv[])
         volatile bool run = true;
         long rate_probe_counter = 0;
         long rate_probe_counter_comp = 10000000;
+        const int buf_num_samples = 4096;
         time_t current_ms = 0, previous_ms = 0;
 
         thread rx([&]() {
             sample s;
+            array<int16_t, buf_num_samples * 2> buf;
+            int buf_i = 0;
 
             while(run)
             {
                 if(srp.get_rx_sample(s))
                 {
-                    _out->write(reinterpret_cast<char *>(&s.i), sizeof(s.i));
-                    _out->write(reinterpret_cast<char *>(&s.q), sizeof(s.q));
+                    // Convert from 12-bit to full scale 16-bit
+                    s.i *= 16;
+                    s.q *= 16;
+
+                    buf[buf_i++] = s.i;
+                    buf[buf_i++] = s.q;
+
+                    if(buf_i == buf_num_samples * 2)
+                    {
+                        buf_i = 0;
+
+                        _out->write((char *) buf.data(), sizeof(int16_t) * buf_num_samples * 2);
+                    }
 
                     rate_probe_counter++;
 

@@ -53,8 +53,8 @@ namespace FreeSRP
 
     struct sample
     {
-        float i;
-        float q;
+        int16_t i;
+        int16_t q;
     };
 
     typedef std::array<unsigned char, FREESRP_UART_BUF_SIZE> cmd_buf;
