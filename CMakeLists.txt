@@ -44,15 +44,15 @@ set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/test/main.cpp)
 add_executable(freesrp-test ${EXAMPLE_TEST_SOURCE_FILES})
 target_link_libraries(freesrp-test freesrp)
 
-# Performance test app
-set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/perftests/main.cpp)
-add_executable(freesrp-perftests ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-perftests freesrp)
-
 # freesrp-rec
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec/main.cpp)
 add_executable(freesrp-rec ${EXAMPLE_TEST_SOURCE_FILES})
 target_link_libraries(freesrp-rec freesrp)
+
+# freesrp-rec2, using callbacks instead of busy waiting
+set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec2/main.cpp)
+add_executable(freesrp-rec2 ${EXAMPLE_TEST_SOURCE_FILES})
+target_link_libraries(freesrp-rec2 freesrp)
 
 # freesrp-ctl
 file(GLOB_RECURSE FREESRP_CTL_FILES
