@@ -199,6 +199,8 @@ namespace FreeSRP
 
         static int fill_tx_transfer(libusb_transfer *transfer);
 
+        static void decode_rx_transfer(unsigned char *buffer, int actual_length, std::vector<sample> &destination);
+
         libusb_context *_ctx = nullptr;
         libusb_device_handle *_freesrp_handle = nullptr;
 
@@ -211,7 +213,7 @@ namespace FreeSRP
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
 
         static std::function<void(const std::vector<sample> &)> _rx_custom_callback;
-        static std::vector<sample> _rx_buf_custom_callback;
+        static std::vector<sample> _rx_decoder_buf;
 
         static moodycamel::ReaderWriterQueue<sample> _rx_buf;
         static moodycamel::ReaderWriterQueue<sample> _tx_buf;

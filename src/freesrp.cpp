@@ -7,7 +7,7 @@ using namespace FreeSRP;
 
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(LIB_RX_TX_BUF_SIZE);
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(LIB_RX_TX_BUF_SIZE);
-std::vector<sample> FreeSRP::FreeSRP::_rx_buf_custom_callback(FREESRP_RX_TX_BUF_SIZE / 4);
+std::vector<sample> FreeSRP::FreeSRP::_rx_decoder_buf(FREESRP_RX_TX_BUF_SIZE / 4);
 std::function<void(const std::vector<sample> &)> FreeSRP::FreeSRP::_rx_custom_callback;
 
 FreeSRP::FreeSRP::FreeSRP()
@@ -263,63 +263,28 @@ void FreeSRP::FreeSRP::rx_callback(libusb_transfer *transfer)
 {
     if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-        // Success
+        // Transfer succeeded
 
-        for(int i = 0; i < transfer->actual_length; i+=4)
+        // Decode samples from transfer buffer into _rx_decoder_buf
+        decode_rx_transfer(transfer->buffer, transfer->actual_length, _rx_decoder_buf);
+
+        if(_rx_custom_callback)
         {
-            uint16_t raw_i;
-            uint16_t raw_q;
-            memcpy(&raw_q, transfer->buffer + i, sizeof(raw_q));
-            memcpy(&raw_i, transfer->buffer + i + sizeof(raw_q), sizeof(raw_i));
-
-            // Convert the raw I/Q values from 12-bit (two's complement) to 16-bit signed integers
-            int16_t signed_i;
-            int16_t signed_q;
-            // Do sign extension
-            bool i_negative = (raw_i & (1 << 11)) != 0;
-            bool q_negative = (raw_q & (1 << 11)) != 0;
-            if(i_negative)
+            // Run the callback function
+            _rx_custom_callback(_rx_decoder_buf);
+        }
+        else
+        {
+            // No callback function specified, add samples to queue
+            for(sample s : _rx_decoder_buf)
             {
-                signed_i = (int16_t) (raw_i | ~((1 << 11) - 1));
-            }
-            else
-            {
-                signed_i = raw_i;
-            }
-            if(q_negative)
-            {
-                signed_q = (int16_t) (raw_q | ~((1 << 11) - 1));
-            }
-            else
-            {
-                signed_q = raw_q;
-            }
-
-            // SKIP THIS: Convert the signed integers (range -2048 to 2047) to floats (range -1 to 1)
-            sample s;
-            //s.i = (float) signed_i / 2048.0f;
-            //s.q = (float) signed_q / 2048.0f;
-            s.i = signed_i;
-            s.q = signed_q;
-
-            // TODO: if(_rx_custom_callback)
-            //{
-            //    _rx_buf_custom_callback.push_back(s);
-            //}
-            //else
-            //{
                 bool success = _rx_buf.try_enqueue(s);
                 if(!success)
                 {
                     // TODO: overflow! handle this
                 }
-            //}
+            }
         }
-
-        // TODO: if(_rx_custom_callback)
-        //{
-        //    _rx_custom_callback(_rx_buf_custom_callback);
-        //}
     }
     else
     {
@@ -495,6 +460,45 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
     }
 
     return transfer->length;
+}
+
+void FreeSRP::FreeSRP::decode_rx_transfer(unsigned char *buffer, int actual_length, std::vector<sample> &destination)
+{
+    destination.resize(actual_length/4);
+
+    for(int i = 0; i < actual_length; i+=4)
+    {
+        uint16_t raw_i;
+        uint16_t raw_q;
+        memcpy(&raw_q, buffer+i, sizeof(raw_q));
+        memcpy(&raw_i, buffer+i+sizeof(raw_q), sizeof(raw_i));
+
+        // Convert the raw I/Q values from 12-bit (two's complement) to 16-bit signed integers
+        int16_t signed_i;
+        int16_t signed_q;
+        // Do sign extension
+        bool i_negative = (raw_i & (1 << 11))!=0;
+        bool q_negative = (raw_q & (1 << 11))!=0;
+        if (i_negative)
+        {
+            signed_i = (int16_t) (raw_i | ~((1 << 11)-1));
+        }
+        else
+        {
+            signed_i = raw_i;
+        }
+        if (q_negative)
+        {
+            signed_q = (int16_t) (raw_q | ~((1 << 11)-1));
+        }
+        else
+        {
+            signed_q = raw_q;
+        }
+
+        destination[i/4].i = signed_i;
+        destination[i/4].q = signed_q;
+    }
 }
 
 void FreeSRP::FreeSRP::run_rx_tx()
