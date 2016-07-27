@@ -68,4 +68,4 @@ install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
 install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)
 
 # Install freesrp-ctl and freesrp-rec utilities
-install(TARGETS freesrp-ctl freesrp-rec RUNTIME DESTINATION bin)
+install(TARGETS freesrp-ctl freesrp-rec freesrp-rec2 RUNTIME DESTINATION bin)

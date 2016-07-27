@@ -68,8 +68,6 @@ void rx_callback(const vector<sample> &samples)
 
     if(rate_probe_counter >= rate_probe_counter_comp)
     {
-        rate_probe_counter = 0;
-
         if(previous_ms == 0)
         {
             previous_ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
@@ -80,8 +78,10 @@ void rx_callback(const vector<sample> &samples)
             time_t elapsed_ms = current_ms - previous_ms;
             previous_ms = current_ms;
 
-            cerr << fixed << setprecision(4) << ((double) rate_probe_counter_comp) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
+            cerr << fixed << setprecision(4) << ((double) rate_probe_counter) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
         }
+
+        rate_probe_counter = 0;
     }
 }
 
