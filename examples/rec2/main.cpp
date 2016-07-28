@@ -54,7 +54,7 @@ void rx_callback(const vector<sample> &samples)
     buf.resize(samples.size() * 2);
 
     int buf_index = 0;
-    for(sample s : samples)
+    for(const sample &s : samples)
     {
         // Convert from 12-bit to full scale 16-bit and copy to output buffer
         buf[buf_index++] = (int16_t) (s.i * 16);
