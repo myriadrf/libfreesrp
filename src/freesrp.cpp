@@ -7,8 +7,10 @@ using namespace FreeSRP;
 
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_rx_buf(FREESRP_RX_TX_QUEUE_SIZE);
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::_tx_buf(FREESRP_RX_TX_QUEUE_SIZE);
-std::vector<sample> FreeSRP::FreeSRP::_rx_decoder_buf(FREESRP_RX_TX_BUF_SIZE / 4);
+std::vector<sample> FreeSRP::FreeSRP::_rx_decoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
 std::function<void(const std::vector<sample> &)> FreeSRP::FreeSRP::_rx_custom_callback;
+std::vector<sample> FreeSRP::FreeSRP::_tx_encoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
+std::function<void(std::vector<sample> &)> FreeSRP::FreeSRP::_tx_custom_callback;
 
 FreeSRP::FreeSRP::FreeSRP()
 {
