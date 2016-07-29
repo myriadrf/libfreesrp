@@ -31,6 +31,8 @@
 #define FREESRP_USB_CTRL_SIZE 64
 #define FREESRP_UART_BUF_SIZE 16
 
+#define FREESRP_BYTES_PER_SAMPLE 4
+
 #define FREESRP_RX_TX_BUF_SIZE 1024 * 64
 #define FREESRP_TX_BUF_SIZE 1024 * 32
 #define FREESRP_RX_TX_TRANSFER_QUEUE_SIZE 128
@@ -172,11 +174,10 @@ namespace FreeSRP
         std::shared_ptr<rx_tx_buf> rx();
         void tx(std::shared_ptr<rx_tx_buf> buf);
 
-        void start_rx();
-        void start_rx(std::function<void(const std::vector<sample> &)> rx_callback);
+        void start_rx(std::function<void(const std::vector<sample> &)> rx_callback = {});
         void stop_rx();
 
-        void start_tx();
+        void start_tx(std::function<void(std::vector<sample> &)> tx_callback = {});
         void stop_tx();
 
         unsigned long available_rx_samples();
@@ -213,7 +214,10 @@ namespace FreeSRP
         std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
 
         static std::function<void(const std::vector<sample> &)> _rx_custom_callback;
+        static std::function<void(std::vector<sample> &)> _tx_custom_callback;
+
         static std::vector<sample> _rx_decoder_buf;
+        static std::vector<sample> _tx_encoder_buf;
 
         static moodycamel::ReaderWriterQueue<sample> _rx_buf;
         static moodycamel::ReaderWriterQueue<sample> _tx_buf;

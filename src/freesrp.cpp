@@ -336,8 +336,10 @@ void FreeSRP::FreeSRP::tx_callback(libusb_transfer* transfer)
     }
 }
 
-void FreeSRP::FreeSRP::start_rx()
+void FreeSRP::FreeSRP::start_rx(std::function<void(const std::vector<sample> &)> rx_callback)
 {
+    _rx_custom_callback = rx_callback;
+
     for(libusb_transfer *transfer: _rx_transfers)
     {
         int ret = libusb_submit_transfer(transfer);
@@ -347,12 +349,6 @@ void FreeSRP::FreeSRP::start_rx()
             throw ConnectionError("Could not submit RX transfer. libusb error: " + std::to_string(ret));
         }
     }
-}
-
-void FreeSRP::FreeSRP::start_rx(std::function<void(const std::vector<sample> &)> rx_callback)
-{
-    _rx_custom_callback = rx_callback;
-    start_rx();
 }
 
 void FreeSRP::FreeSRP::stop_rx()
@@ -372,8 +368,10 @@ void FreeSRP::FreeSRP::stop_rx()
     }
 }
 
-void FreeSRP::FreeSRP::start_tx()
+void FreeSRP::FreeSRP::start_tx(std::function<void(std::vector<sample> &)> tx_callback)
 {
+    _tx_custom_callback = tx_callback;
+
     // Fill the tx buffer with empty samples
     sample empty_sample{0, 0};
     while(_tx_buf.try_enqueue(empty_sample)) {}
@@ -412,25 +410,32 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
     // Fill the transfer buffer with available samples
     transfer->length = FREESRP_TX_BUF_SIZE;
 
-    for(int i = 0; i < transfer->length; i+=4)
+    _tx_encoder_buf.resize(transfer->length/FREESRP_BYTES_PER_SAMPLE);
+
+    if(_tx_custom_callback)
     {
-        sample s;
-        int success = _tx_buf.try_dequeue(s);
-        if(!success)
+        _tx_custom_callback(_tx_encoder_buf);
+    }
+    else
+    {
+        for(sample &s : _tx_encoder_buf)
         {
-            //std::cerr << "Warning: TX packet not filled completely. Something weird is going on..." << std::endl;
-            //transfer->length = i;
-            //break;
-
-            // TODO: Notify of this? Do something else?
-            // No data available, fill with zeros
-            s.i = 0;
-            s.q = 0;
+            int success = _tx_buf.try_dequeue(s);
+            if(!success)
+            {
+                // TODO: Notify of this? Do something else?
+                // No data available, fill with zeros
+                s.i = 0;
+                s.q = 0;
+            }
         }
+    }
 
-        // SLIP THIS: Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
-        int16_t signed_i = s.i;
-        int16_t signed_q = s.q;
+    for(int i = 0; i < transfer->length; i+=FREESRP_BYTES_PER_SAMPLE)
+    {
+        // SKIP THIS: Convert -1.0 to 1.0 float sample value to signed 16-bit int with range -2048 to 2048
+        int16_t signed_i = _tx_encoder_buf[i/FREESRP_BYTES_PER_SAMPLE].i;
+        int16_t signed_q = _tx_encoder_buf[i/FREESRP_BYTES_PER_SAMPLE].q;
 
         // Unsigned 16-bit ints holding the two's-complement 12-bit sample values
         uint16_t raw_i;
@@ -464,9 +469,9 @@ int FreeSRP::FreeSRP::fill_tx_transfer(libusb_transfer* transfer)
 
 void FreeSRP::FreeSRP::decode_rx_transfer(unsigned char *buffer, int actual_length, std::vector<sample> &destination)
 {
-    destination.resize(actual_length/4);
+    destination.resize(actual_length/FREESRP_BYTES_PER_SAMPLE);
 
-    for(int i = 0; i < actual_length; i+=4)
+    for(int i = 0; i < actual_length; i+=FREESRP_BYTES_PER_SAMPLE)
     {
         uint16_t raw_i;
         uint16_t raw_q;
@@ -496,8 +501,8 @@ void FreeSRP::FreeSRP::decode_rx_transfer(unsigned char *buffer, int actual_leng
             signed_q = raw_q;
         }
 
-        destination[i/4].i = signed_i;
-        destination[i/4].q = signed_q;
+        destination[i/FREESRP_BYTES_PER_SAMPLE].i = signed_i;
+        destination[i/FREESRP_BYTES_PER_SAMPLE].q = signed_q;
     }
 }
 
