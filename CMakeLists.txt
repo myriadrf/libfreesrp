@@ -49,10 +49,10 @@ set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec/main.cpp)
 add_executable(freesrp-rec ${EXAMPLE_TEST_SOURCE_FILES})
 target_link_libraries(freesrp-rec freesrp)
 
-# freesrp-rec2, using callbacks instead of busy waiting
-set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec2/main.cpp)
-add_executable(freesrp-rec2 ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-rec2 freesrp)
+# freesrp-io, using callbacks instead of busy waiting
+set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/io/main.cpp)
+add_executable(freesrp-io ${EXAMPLE_TEST_SOURCE_FILES})
+target_link_libraries(freesrp-io freesrp)
 
 # freesrp-ctl
 file(GLOB_RECURSE FREESRP_CTL_FILES
@@ -68,4 +68,4 @@ install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
 install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)
 
 # Install freesrp-ctl and freesrp-rec utilities
-install(TARGETS freesrp-ctl freesrp-rec freesrp-rec2 RUNTIME DESTINATION bin)
+install(TARGETS freesrp-ctl freesrp-rec freesrp-io RUNTIME DESTINATION bin)

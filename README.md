@@ -1,12 +1,12 @@
 # libfreesrp
 
-The [FreeSRP](http://electronics.kitchen/freesrp) is an open source platform for software defined radio. The hardware is based around the [Analog Devices AD9364](http://www.analog.com/en/products/rf-microwave/integrated-transceivers-transmitters-receivers/wideband-transceivers-ic/ad9364.html) transceiver covering 70 MHz - 6 Ghz with a bandwidth of up to 50 MHz, an Xilinx Artix 7 FPGA and a USB 3.0 connection to stream data to a computer in real time.
+The [FreeSRP](http://electronics.kitchen/freesrp) is an open source platform for software defined radio. The hardware is based around the [Analog Devices AD9364](http://www.analog.com/en/products/rf-microwave/integrated-transceivers-transmitters-receivers/wideband-transceivers-ic/ad9364.html) transceiver covering 70 MHz - 6 Ghz with a bandwidth of up to 56 MHz, an Xilinx Artix 7 FPGA and a USB 3.0 connection to stream data to a computer in real time.
 
 libfreesrp is a small C++ library that uses [libusb](http://www.libusb.org/) to program and configure the FreeSRP hardware and both receive and transmit RF signals.
 
 ## Under construction
 
-Right now, programming the FreeSRP, configuring the AD9364 and receiving data works well. However, this library has not yet been thoroughly tested and transmitting is not yet possible.
+Right now, programming the FreeSRP, configuring the AD9364 and receiving data works well. Transmitting and full duplex operation are also possible, but not yet at the full bandwidth.
 
 ## Getting started
 

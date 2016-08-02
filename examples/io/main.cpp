@@ -18,21 +18,25 @@
 using namespace std;
 using namespace FreeSRP;
 
-enum optionIndex {NONE, HELP, OUTFILE, FPGA, CENTER_FREQ, BANDWIDTH, GAIN};
+enum optionIndex {NONE, HELP, OUTFILE, INFILE, FPGA, TX, LOOPBACK, CENTER_FREQ, BANDWIDTH, GAIN};
 const option::Descriptor usage[] = {
-        {NONE,        0, "",  "",            option::Arg::None,      "usage: freesrp-rec [options] -ofilename\n"
-                                                                     "       output format is complex signed 16-bit\noptions:"},
+        {NONE,        0, "",  "",            option::Arg::None,      "usage: freesrp-io [options] -ofilename\n"
+                                                                     "       input/output format is complex signed 16-bit\noptions:"},
         {HELP,        0, "h", "help",        option::Arg::None,      "  -h, --help                     Print usage and exit"},
         {OUTFILE,     0, "o", "out",         option::Arg::Optional,  "  -o[filename], --out=[filename] Output to specified file ('-o-' for stdout)"},
+        {INFILE,      0, "i", "in",          option::Arg::Optional,  "  -i[filename], --in=[filename]  Read from specified file ('-i-' for stdin)"},
         {FPGA,        0, "",  "fpga",        option::Arg::Optional,  "  --fpga=/path/to/bitstream.bin  Load the FPGA with the specified bitstream"},
-        {CENTER_FREQ, 0, "f", "freq",       option::Arg::Optional,   "  -f[freq], --freq=[freq]        Center frequency in hertz (70e6 to 6e9)"},
-        {BANDWIDTH,   0, "b", "bandwidth",  option::Arg::Optional,   "  -b[bw], --bandwidth=[bw]       Bandwidth in hertz (1e6 to 61.44e6)"},
+        {TX,          0, "t", "tx",          option::Arg::Optional,  "  -t, --tx                       Enable the transmitter"},
+        {LOOPBACK,    0, "l", "loopback",    option::Arg::Optional,  "  -l, --loopback                 Put transceiver in loopback mode"},
+        {CENTER_FREQ, 0, "f", "freq",        option::Arg::Optional,  "  -f[freq], --freq=[freq]        Center frequency in hertz (70e6 to 6e9)"},
+        {BANDWIDTH,   0, "b", "bandwidth",   option::Arg::Optional,  "  -b[bw], --bandwidth=[bw]       Bandwidth in hertz (1e6 to 61.44e6)"},
         {GAIN,        0, "g", "gain",        option::Arg::Optional,  "  -g[gain], --gain=[gain]        Gain in decibels (0 to 74)"},
-        {NONE,        0, "",  "",            option::Arg::None,      "\nexample: freesrp-rec -f2.42e9 -b4e6 -g30 -o-"},
+        {NONE,        0, "",  "",            option::Arg::None,      "\nexample: freesrp-io -f2.42e9 -b4e6 -g30 -o-"},
         {0,0,0,0,0,0}
 };
 
 unique_ptr<ostream> _out = nullptr;
+unique_ptr<istream> _in = nullptr;
 
 mutex _interrupt_mut;
 condition_variable _interrupt;
@@ -78,7 +82,50 @@ void rx_callback(const vector<sample> &samples)
             time_t elapsed_ms = current_ms - previous_ms;
             previous_ms = current_ms;
 
-            cerr << fixed << setprecision(4) << ((double) rate_probe_counter) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
+            cerr << "RX: " << fixed << setprecision(4) << ((double) rate_probe_counter) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
+        }
+
+        rate_probe_counter = 0;
+    }
+}
+
+void tx_callback(vector<sample> &samples)
+{
+    static vector<int16_t> buf;
+
+    // For rate counter
+    static long rate_probe_counter = 0; // Samples processed since last comparison period
+    static long rate_probe_counter_comp = 10000000; // Calculate rate every this many processed samples
+    static time_t current_ms = 0, previous_ms = 0;
+
+    buf.resize(samples.size() * 2);
+
+    _in->read((char *) buf.data(), sizeof(int16_t) * 2 * samples.size());
+
+    int buf_index = 0;
+    for(sample &s : samples)
+    {
+        // Convert from full scale 16-bit to 12 bit and copy to output buffer
+        s.i = (int16_t) (buf[buf_index++] / 16);
+        s.q = (int16_t) (buf[buf_index++] / 16);
+    }
+
+    // Calculate & report sample rate
+    rate_probe_counter += samples.size();
+
+    if(rate_probe_counter >= rate_probe_counter_comp)
+    {
+        if(previous_ms == 0)
+        {
+            previous_ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+        }
+        else
+        {
+            current_ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();;
+            time_t elapsed_ms = current_ms - previous_ms;
+            previous_ms = current_ms;
+
+            cerr << "TX: " << fixed << setprecision(4) << ((double) rate_probe_counter) / ((double) elapsed_ms) / 1000.0 << "MSps" << endl;
         }
 
         rate_probe_counter = 0;
@@ -143,14 +190,51 @@ int main(int argc, char *argv[])
             of.open(outfile, ios::binary | ios::out);
             of_buf = of.rdbuf();
         }
+
+        _out.reset(new ostream(of_buf));
     }
     else
     {
-        cerr << "Error: You must specify an output file using the '-o' option. See 'freesrp-rec --help'." << endl;
+        cerr << "Error: You must specify an output file using the '-o' option. See 'freesrp-io --help'." << endl;
         return 1;
     }
 
-    _out.reset(new ostream(of_buf));
+    bool loopback = false, transmit = false;
+
+    streambuf *if_buf;
+    ifstream ifs;
+
+    if((!options[TX] != !options[LOOPBACK]) && options[INFILE] && options[INFILE].arg)
+    {
+        if(options[TX])
+        {
+            transmit = true;
+        }
+
+        if(options[LOOPBACK])
+        {
+            loopback = true;
+        }
+
+        string infile = options[INFILE].arg;
+
+        if(infile == "-")
+        {
+            if_buf = cin.rdbuf();
+        }
+        else
+        {
+            ifs.open(infile, ios::binary | ios::in);
+            if_buf = ifs.rdbuf();
+        }
+
+        _in.reset(new istream(if_buf));
+    }
+    else if(options[LOOPBACK] || options[TX] || options[INFILE])
+    {
+        cerr << "Error: You must both enable the transmitter or the loopback mode and specify an input file." << endl;
+        return 1;
+    }
 
     double center_freq = 0, bandwidth = 0, gain = 0;
 
@@ -171,7 +255,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        cerr << "Error: Please specify center frequency, bandwidth and gain. See 'freesrp-rec --help'." << endl;
+        cerr << "Error: Please specify center frequency, bandwidth and gain. See 'freesrp-io --help'." << endl;
         return 1;
     }
 
@@ -185,7 +269,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            cerr << "Error: --fpga option expects a filename! See 'freesrp-rec --help'." << endl;
+            cerr << "Error: --fpga option expects a filename! See 'freesrp-io --help'." << endl;
             return 1;
         }
     }
@@ -218,7 +302,7 @@ int main(int argc, char *argv[])
         if(!srp.fpga_loaded())
         {
             cerr << "FPGA not configured. Please configure the FPGA first: " << endl;
-            cerr << "Example: freesrp-rec --fpga=/path/to/bitstream.bin" << endl;
+            cerr << "Example: freesrp-io --fpga=/path/to/bitstream.bin" << endl;
             return 1;
         }
 
@@ -256,8 +340,29 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        if(loopback)
+        {
+            // Enable loopback
+            r = srp.send_cmd(srp.make_command(SET_LOOPBACK_EN, 1));
+            if(r.error != CMD_OK)
+            {
+                std::cerr << "Could not enable loopback mode, error: " << r.error << endl;
+                return 1;
+            }
+            else
+            {
+                std::cerr << "FreeSRP in loopback mode" << endl;
+            }
+        }
+
         // Enable signal chain and start receiving samples
         start(srp);
+
+        if(transmit || loopback)
+        {
+            // Enable transmit signal chain
+            srp.start_tx(tx_callback);
+        }
 
         // Wait for Control-C
         struct sigaction sigint_handler;
@@ -271,10 +376,27 @@ int main(int argc, char *argv[])
         unique_lock<mutex> lck(_interrupt_mut);
         _interrupt.wait(lck);
 
+        if(transmit || loopback)
+        {
+            // Disable transmitter
+            srp.stop_tx();
+        }
+
         // Disable signal chain
         stop(srp);
 
         _out->flush();
+
+        if(loopback)
+        {
+            // Disable loopback
+            r = srp.send_cmd(srp.make_command(SET_LOOPBACK_EN, 0));
+            if(r.error != CMD_OK)
+            {
+                std::cerr << "Could not disable loopback mode, error: " << r.error << endl;
+                return 1;
+            }
+        }
 
         cerr << endl << "Stopped." << endl;
 
