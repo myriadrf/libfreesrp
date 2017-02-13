@@ -42,17 +42,17 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 # Test app
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/test/main.cpp)
 add_executable(freesrp-test ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-test freesrp)
+target_link_libraries(freesrp-test freesrp pthread)
 
 # freesrp-rec
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec/main.cpp)
 add_executable(freesrp-rec ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-rec freesrp)
+target_link_libraries(freesrp-rec freesrp pthread)
 
 # freesrp-io, using callbacks instead of busy waiting
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/io/main.cpp)
 add_executable(freesrp-io ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-io freesrp)
+target_link_libraries(freesrp-io freesrp pthread)
 
 # freesrp-ctl
 file(GLOB_RECURSE FREESRP_CTL_FILES
