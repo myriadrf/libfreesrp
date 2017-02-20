@@ -1,0 +1,17 @@
+image: ubuntu:16.04
+
+build:
+  stage: build
+  before_script: 
+    - apt update && apt -y install build-essential cmake libusb-1.0-0-dev libboost-all-dev
+  script: 
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release
+    - make
+  artifacts:
+    paths:
+      - build/libfreesrp.so
+      - build/freesrp-io
+      - build/freesrp-rec
+      - build/freesrp-ctl
