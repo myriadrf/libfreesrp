@@ -21,7 +21,7 @@
 #define LIBFREESRP_FREESRP_IMPL_HPP
 
 #include <freesrp.hpp>
-#include <readerwriterqueue/readerwriterqueue.h>
+#include "readerwriterqueue/readerwriterqueue.h"
 
 #include <libusb.h>
 
