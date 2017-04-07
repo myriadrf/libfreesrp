@@ -31,10 +31,6 @@
 #include <functional>
 #include <cstdint>
 
-#include <libusb.h>
-
-#include <readerwriterqueue/readerwriterqueue.h>
-
 #define FREESRP_VENDOR_ID 0xe1ec
 #define FREESRP_PRODUCT_ID 0xf5d0
 #define FX3_VENDOR_ID 0x04b4
@@ -63,6 +59,7 @@
 #define FREESRP_FPGA_CONFIG_LOAD 0xB2
 #define FREESRP_FPGA_CONFIG_STATUS 0xB1
 #define FREESRP_FPGA_CONFIG_FINISH 0xB3
+
 
 namespace FreeSRP
 {
@@ -183,72 +180,106 @@ namespace FreeSRP
 
     class FreeSRP
     {
+	class impl;
+	std::unique_ptr<impl> _impl;
+	
     public:
+
+	//! FreeSRP constructor.
+	/*!
+	 * Will attempt to find and connect to a FreeSRP and throw a ConnectionError if no FreeSRP
+         * can be found or there is an error while communicating with it.
+	 */
         FreeSRP();
+
         ~FreeSRP();
 
+	//! Check if the FPGA has been loaded.
+	/*!
+         * \return true if the FPGA is configured, false if configuration is still needed.
+         */
         bool fpga_loaded();
+
+	//! Load the FPGA with the specified bitstream.
+	/*!
+         * \param filename: The filename of the bitstream to load onto the FPGA.
+         * \returns An fpga_status value indicating wether the FPGA was successfully configured.
+         */
         fpga_status load_fpga(std::string filename);
 
-        std::shared_ptr<rx_tx_buf> rx();
-        void tx(std::shared_ptr<rx_tx_buf> buf);
-
+	//! Start receiving samples.
+	/*!
+	 * \param rx_callback: Optionally, specify a function to be called once a new sample buffer is available.
+         */
         void start_rx(std::function<void(const std::vector<sample> &)> rx_callback = {});
+
+	//! Stop receiving samples.
+	/*!
+	 *
+	 */
         void stop_rx();
 
+	//! Start transmitting samples.
+	/*!
+	 * \param tx_callback: Optionaly, specify a function to be called once a new sample buffer is available.
+         */
         void start_tx(std::function<void(std::vector<sample> &)> tx_callback = {});
+
+	//! Stop transmitting samples.
         void stop_tx();
 
+	//! Check how many received samples are available.
+	/*!
+	 * Note: samples will not be written to the main buffer if a callback is specified in start_rx.
+	 * \returns Number of samples available to read from the buffer.
+	 */
         unsigned long available_rx_samples();
+
+	//! Get sample from queue.
+	/*
+	 * Note: samples will only be available if no callback if specified in start_rx.
+	 * \param s: A reference to the sample to be read.
+         * \returns: true if a sample was read, false if the queue is empty.
+	 */
         bool get_rx_sample(sample &s);
 
+	//! Add a sample to the transmitter queue.
+	/*!
+	 * \param s: the sample to add to the transmitter queue
+         * \returns: true if the sample was successfully added to the queue, false if the queue is full.
+	 */
         bool submit_tx_sample(sample &s);
 
+	//! Helper function to generate a FreeSRP::command
+	/*!
+         * \param command_id: the ID of the desired command
+	 * \param param: Value of the parameter. Meaning varies depending on the command associated with this value.
+	 * \returns The command.
+	 */
         command make_command(command_id id, double param) const;
+
+	//! Send a command to the FreeSRP
+	/*!
+	 * Note: this call will block until a response from the FreeSRP is received back.
+	 * \param c: The command to send (see also make_command)
+	 * \returns The response from the FreeSRP
+	 */
         response send_cmd(command c) const;
 
+	//! Get version information about the FreeSRP
+	/*!
+	 * \returns Version information the FreeSRP responded with.
+	 */
         freesrp_version version();
-    private:
-        void run_rx_tx();
-
-        libusb_transfer *create_rx_transfer(libusb_transfer_cb_fn callback);
-        libusb_transfer *create_tx_transfer(libusb_transfer_cb_fn callback);
-
-        static void rx_callback(libusb_transfer *transfer);
-        static void tx_callback(libusb_transfer *transfer);
-
-        static int fill_tx_transfer(libusb_transfer *transfer);
-
-        static void decode_rx_transfer(unsigned char *buffer, int actual_length, std::vector<sample> &destination);
-
-        libusb_context *_ctx = nullptr;
-        libusb_device_handle *_freesrp_handle = nullptr;
-
-        std::string _fx3_fw_version;
-
-        std::atomic<bool> _run_rx_tx{false};
-        std::unique_ptr<std::thread> _rx_tx_worker;
-
-        std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _rx_transfers;
-        std::array<libusb_transfer *, FREESRP_RX_TX_TRANSFER_QUEUE_SIZE> _tx_transfers;
-
-        static std::function<void(const std::vector<sample> &)> _rx_custom_callback;
-        static std::function<void(std::vector<sample> &)> _tx_custom_callback;
-
-        static std::vector<sample> _rx_decoder_buf;
-        static std::vector<sample> _tx_encoder_buf;
-
-        static moodycamel::ReaderWriterQueue<sample> _rx_buf;
-        static moodycamel::ReaderWriterQueue<sample> _tx_buf;
     };
 
     namespace Util
     {
-        /*
-         * This will look for an FX3 in bootloader mode.
-         * upload_firmware: If 'false', this function will return 'true' if an unprogrammed FX3 is found.
-         *                  If 'true', it will attempt to program the FX3 with the specified firmware.
-         * filename: Path to the image file to program the FX3 with.
+        //! This will look for an FX3 in bootloader mode.
+	/*!
+         * \param upload_firmware: If 'false', this function will return 'true' if an unprogrammed FX3 is found.
+         *                          If 'true', it will attempt to program the FX3 with the specified firmware.
+         * \param filename: Path to the image file to program the FX3 with.
          */
         bool find_fx3(bool upload_firmware=false, std::string filename="");
     };

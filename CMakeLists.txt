@@ -20,7 +20,7 @@ file(GLOB_RECURSE LIBFREESRP_INCLUDE_FILES
 )
 
 file(GLOB_RECURSE READERWRITERQUEUE_INCLUDE_FILES
-    ${PROJECT_SOURCE_DIR}/include/readerwriterqueue/*.h
+    ${PROJECT_SOURCE_DIR}/src/readerwriterqueue/*.h
 )
 
 add_library(
@@ -39,16 +39,6 @@ target_link_libraries(freesrp ${LIBUSB_1_LIBRARIES})
 # Examples
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-# Test app
-set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/test/main.cpp)
-add_executable(freesrp-test ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-test freesrp pthread)
-
-# freesrp-rec
-set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/rec/main.cpp)
-add_executable(freesrp-rec ${EXAMPLE_TEST_SOURCE_FILES})
-target_link_libraries(freesrp-rec freesrp pthread)
-
 # freesrp-io, using callbacks instead of busy waiting
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/io/main.cpp)
 add_executable(freesrp-io ${EXAMPLE_TEST_SOURCE_FILES})
@@ -65,7 +55,6 @@ target_link_libraries(freesrp-ctl freesrp)
 # Install library
 install(TARGETS freesrp LIBRARY DESTINATION lib)
 install(FILES ${LIBFREESRP_INCLUDE_FILES} DESTINATION include)
-install(FILES ${READERWRITERQUEUE_INCLUDE_FILES} DESTINATION include/readerwriterqueue)
 
-# Install freesrp-ctl and freesrp-rec utilities
-install(TARGETS freesrp-ctl freesrp-rec freesrp-io RUNTIME DESTINATION bin)
+# Install freesrp-ctl and freesrp-io utilities
+install(TARGETS freesrp-ctl freesrp-io RUNTIME DESTINATION bin)

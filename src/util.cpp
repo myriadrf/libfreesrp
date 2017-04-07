@@ -22,6 +22,8 @@
 #include <fstream>
 #include <vector>
 
+#include <libusb.h>
+
 #define GET_LSW(v) ((unsigned short)((v) & 0xFFFF))
 #define GET_MSW(v) ((unsigned short)((v) >> 16))
 #define MAX_WRITE_SIZE (2 * 1024)
