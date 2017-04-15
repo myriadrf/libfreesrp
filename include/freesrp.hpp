@@ -189,10 +189,18 @@ namespace FreeSRP
 	/*!
 	 * Will attempt to find and connect to a FreeSRP and throw a ConnectionError if no FreeSRP
          * can be found or there is an error while communicating with it.
+	 * \param serial_number: If specified, will try to connect to a FreeSRP that that contains
+         *                       serial_number as a substring of or matches its serial number
 	 */
-        FreeSRP();
+        FreeSRP(std::string serial_number = "");
 
         ~FreeSRP();
+
+	//! List serial numbers of all connected FreeSRPs
+	/*!
+	 * \return An std::vector containing the serial numbers of all available devices
+	 */
+	static std::vector<std::string> list_connected();
 
 	//! Check if the FPGA has been loaded.
 	/*!

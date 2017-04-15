@@ -93,15 +93,45 @@ bool process_command(const FreeSRP::FreeSRP &srp)
     return !exit;
 }
 
-enum optionIndex {NONE, HELP, INTERACTIVE, FPGA, FX3};
+enum optionIndex {NONE, HELP, INTERACTIVE, FPGA, FX3, LIST};
 const option::Descriptor usage[] = {
-    {NONE,        0, "",  "",       option::Arg::None,      "usage: freesrp-ctl [options]\noptions:"},
+    {NONE,        0, "",  "",       option::Arg::None,      "usage: freesrp-ctl [options] [id]\noptions:"},
     {HELP,        0, "",  "help",   option::Arg::None,      "  --help                           Print usage and exit"},
+    {LIST,        0, "l", "list",   option::Arg::None,      "  --list, -l                       List serial numbers of connected FreeSRPs"},
     {INTERACTIVE, 0, "i", "interactive", option::Arg::None, "  --interactive, -i                Run in interactive mode"},
     {FPGA,        0, "",  "fpga",   option::Arg::Optional,  "  --fpga=/path/to/bitstream.bin    Load the FPGA with the specified bitstream"},
     {FX3,         0, "",  "fx3",    option::Arg::Optional,  "  --fx3=/path/to/firmware.img      Upload firmware to a Cypress EZ-USB FX3"},
+    {NONE,        0, "",  "",       option::Arg::None,      "id:\n  (optional) the serial number of the device to connect to."},
     {0,0,0,0,0,0}
 };
+
+void list_devices()
+{
+    vector<string> connected_devs = FreeSRP::FreeSRP::list_connected();
+
+    if(connected_devs.size() == 0)
+    {
+	cout << "No FreeSRP found" << endl;
+	return;
+    }
+
+    cout << "FreeSRP devices detected:" << endl;
+    
+    for(string &serial : connected_devs)
+    {
+	cout << "   * " << serial << endl;
+    }
+}
+
+void check_fx3()
+{
+    // Check for FX3
+    if(Util::find_fx3())
+    {
+        cout << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
+                "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -116,10 +146,24 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    std::string serial = "";
+    
+    if(parse.nonOptionsCount() > 0)
+    {
+        serial = parse.nonOption(0);
+    }
+
     if(options[HELP])
     {
         option::printUsage(cout, usage);
         return 0;
+    }
+
+    if(options[LIST])
+    {
+	list_devices();
+	check_fx3();
+	return 0;
     }
 
     std::string fpgaconfig_filename = "";
@@ -184,7 +228,7 @@ int main(int argc, char *argv[])
     // Connect to FreeSRP and start interactive mode if requested
     try
     {
-        FreeSRP::FreeSRP srp;
+        FreeSRP::FreeSRP srp(serial);
         cout << "Found FreeSRP" << endl;
 
         // Configure FPGA if bitstream specified
@@ -231,12 +275,7 @@ int main(int argc, char *argv[])
         cerr << "Unexpected exception occurred! " << e.what() << endl;
     }
 
-    // Check for FX3
-    if(Util::find_fx3())
-    {
-        cout << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
-                "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
-    }
-
+    check_fx3();
+    
     return 0;
 }

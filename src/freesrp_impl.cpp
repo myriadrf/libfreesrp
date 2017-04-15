@@ -23,6 +23,9 @@
 #include <cstring>
 #include <fstream>
 
+#define FREESRP_SERIAL_DSCR_INDEX 3
+#define MAX_SERIAL_LENGTH 256
+
 using namespace FreeSRP;
 
 moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::impl::_rx_buf(FREESRP_RX_TX_QUEUE_SIZE);
@@ -32,7 +35,7 @@ std::function<void(const std::vector<sample> &)> FreeSRP::FreeSRP::impl::_rx_cus
 std::vector<sample> FreeSRP::FreeSRP::impl::_tx_encoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
 std::function<void(std::vector<sample> &)> FreeSRP::FreeSRP::impl::_tx_custom_callback;
 
-FreeSRP::FreeSRP::impl::impl()
+FreeSRP::FreeSRP::impl::impl(std::string serial_number)
 {
     libusb_device **devs;
 
@@ -53,7 +56,8 @@ FreeSRP::FreeSRP::impl::impl()
     }
 
     // Find FreeSRP device
-    // TODO: Handle multiple FreeSRPs
+    bool no_match = false;
+    
     for(int i = 0; i < num_devs; i++)
     {
         libusb_device_descriptor desc;
@@ -70,9 +74,40 @@ FreeSRP::FreeSRP::impl::impl()
             {
                 throw ConnectionError("libusb could not open found FreeSRP USB device: error " + std::to_string(ret));
             }
+
+	    // Check if correct serial number
+	    char serial_num_buf[MAX_SERIAL_LENGTH];
+	    ret = libusb_get_string_descriptor_ascii(_freesrp_handle, FREESRP_SERIAL_DSCR_INDEX, (unsigned char *) serial_num_buf, MAX_SERIAL_LENGTH);
+	    if(ret < 0)
+	    {
+		libusb_close(_freesrp_handle);
+		_freesrp_handle = nullptr;
+		throw ConnectionError("libusb could not read FreeSRP serial number: error " + std::to_string(ret));
+	    }
+	    else
+	    {
+		std::string dev_serial = std::string(serial_num_buf);
+
+		if(dev_serial.find(serial_number) != std::string::npos)
+		{
+		    // Found!
+		    break;
+		}
+		else
+		{
+		    no_match = true;
+		    libusb_close(_freesrp_handle);
+		    _freesrp_handle = nullptr;
+		}
+	    }
         }
     }
 
+    if(no_match && _freesrp_handle == nullptr)
+    {
+	throw ConnectionError("FreeSRP device(s) were found, but did not match specified serial number"); 
+    }
+    
     if(_freesrp_handle == nullptr)
     {
         throw ConnectionError("no FreeSRP device found");
@@ -152,6 +187,68 @@ FreeSRP::FreeSRP::impl::~impl()
     {
         libusb_exit(_ctx); // close the session
     }
+}
+
+std::vector<std::string> FreeSRP::FreeSRP::impl::list_connected()
+{
+    libusb_device **devs;
+    libusb_context *list_ctx;
+
+    std::vector<std::string> list;
+    
+    int ret = libusb_init(&list_ctx);
+    if(ret < 0)
+    {
+        throw ConnectionError("libusb init error: error " + std::to_string(ret));
+    }
+
+    // Set verbosity level
+    libusb_set_debug(list_ctx, 3);
+
+    // Retrieve device list
+    int num_devs = (int) libusb_get_device_list(list_ctx, &devs);
+    if(num_devs < 0)
+    {
+        throw ConnectionError("libusb device list retrieval error");
+    }
+
+    // Find all FreeSRP devices
+    for(int i = 0; i < num_devs; i++)
+    {
+        libusb_device_descriptor desc;
+        int ret = libusb_get_device_descriptor(devs[i], &desc);
+        if(ret < 0)
+        {
+            throw ConnectionError("libusb error getting device descriptor: error " + std::to_string(ret));
+        }
+
+        if(desc.idVendor == FREESRP_VENDOR_ID && desc.idProduct == FREESRP_PRODUCT_ID)
+        {
+	    libusb_device_handle *temp_handle;
+            int ret = libusb_open(devs[i], &temp_handle);
+            if(ret != 0)
+            {
+                throw ConnectionError("libusb could not open found FreeSRP USB device: error " + std::to_string(ret));
+            }
+
+	    char serial_num_buf[MAX_SERIAL_LENGTH];
+	    ret = libusb_get_string_descriptor_ascii(temp_handle, FREESRP_SERIAL_DSCR_INDEX, (unsigned char *) serial_num_buf, MAX_SERIAL_LENGTH);
+	    if(ret < 0)
+	    {
+		throw ConnectionError("libusb could not read FreeSRP serial number: error " + std::to_string(ret));
+	    }
+	    else
+	    {
+		list.push_back(std::string(serial_num_buf));
+	    }
+	    
+	    libusb_close(temp_handle);
+        }
+    }
+
+    libusb_exit(list_ctx);
+
+    return list;
 }
 
 bool FreeSRP::FreeSRP::impl::fpga_loaded()

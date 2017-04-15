@@ -13,5 +13,4 @@ build:
     paths:
       - build/libfreesrp.so
       - build/freesrp-io
-      - build/freesrp-rec
       - build/freesrp-ctl

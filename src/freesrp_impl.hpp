@@ -30,12 +30,14 @@ namespace FreeSRP
     class FreeSRP::impl
     {
     public:
-        impl();
+        impl(std::string serial_number = "");
         ~impl();
 
+	static std::vector<std::string> list_connected();
+	
         bool fpga_loaded();
         fpga_status load_fpga(std::string filename);
-
+	
         std::shared_ptr<rx_tx_buf> rx();
         void tx(std::shared_ptr<rx_tx_buf> buf);
 
