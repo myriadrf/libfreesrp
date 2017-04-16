@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.4)
 project(libfreesrp)
 
+set(VERSION_MAJOR "0")
+set(VERSION_MINOR "3")
+set(VERSION_PATCH "0")
+set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -34,6 +39,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("-- WARNING: Configured in DEBUG mode. This will *very heavily* impact performance!")
 endif()
 
+set_target_properties(freesrp PROPERTIES VERSION ${VERSION} SOVERSION ${VERSION_MAJOR})
 target_link_libraries(freesrp ${LIBUSB_1_LIBRARIES})
 
 # Examples
