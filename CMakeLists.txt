@@ -45,6 +45,9 @@ target_link_libraries(freesrp ${LIBUSB_1_LIBRARIES})
 # Examples
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 # freesrp-io, using callbacks instead of busy waiting
 set(EXAMPLE_TEST_SOURCE_FILES ${PROJECT_SOURCE_DIR}/examples/io/main.cpp)
 add_executable(freesrp-io ${EXAMPLE_TEST_SOURCE_FILES})
