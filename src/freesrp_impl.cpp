@@ -246,6 +246,7 @@ std::vector<std::string> FreeSRP::FreeSRP::impl::list_connected()
         }
     }
 
+    libusb_free_device_list(devs, 1);
     libusb_exit(list_ctx);
 
     return list;
