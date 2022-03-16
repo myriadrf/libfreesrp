@@ -26,14 +26,13 @@
 #define FREESRP_SERIAL_DSCR_INDEX 3
 #define MAX_SERIAL_LENGTH 256
 
-using namespace FreeSRP;
 
-moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::impl::_rx_buf(FREESRP_RX_TX_QUEUE_SIZE);
-moodycamel::ReaderWriterQueue<sample> FreeSRP::FreeSRP::impl::_tx_buf(FREESRP_RX_TX_QUEUE_SIZE);
-std::vector<sample> FreeSRP::FreeSRP::impl::_rx_decoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
-std::function<void(const std::vector<sample> &)> FreeSRP::FreeSRP::impl::_rx_custom_callback;
-std::vector<sample> FreeSRP::FreeSRP::impl::_tx_encoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
-std::function<void(std::vector<sample> &)> FreeSRP::FreeSRP::impl::_tx_custom_callback;
+moodycamel::ReaderWriterQueue<FreeSRP::sample> FreeSRP::FreeSRP::impl::_rx_buf(FREESRP_RX_TX_QUEUE_SIZE);
+moodycamel::ReaderWriterQueue<FreeSRP::sample> FreeSRP::FreeSRP::impl::_tx_buf(FREESRP_RX_TX_QUEUE_SIZE);
+std::vector<FreeSRP::sample> FreeSRP::FreeSRP::impl::_rx_decoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
+std::function<void(const std::vector<FreeSRP::sample> &)> FreeSRP::FreeSRP::impl::_rx_custom_callback;
+std::vector<FreeSRP::sample> FreeSRP::FreeSRP::impl::_tx_encoder_buf(FREESRP_RX_TX_BUF_SIZE / FREESRP_BYTES_PER_SAMPLE);
+std::function<void(std::vector<FreeSRP::sample> &)> FreeSRP::FreeSRP::impl::_tx_custom_callback;
 
 FreeSRP::FreeSRP::impl::impl(std::string serial_number)
 {
@@ -264,7 +263,7 @@ bool FreeSRP::FreeSRP::impl::fpga_loaded()
     return fpga_load_success;
 }
 
-fpga_status FreeSRP::FreeSRP::impl::load_fpga(std::string filename)
+FreeSRP::fpga_status FreeSRP::FreeSRP::impl::load_fpga(std::string filename)
 {
     if(fpga_loaded())
     {
@@ -331,7 +330,7 @@ fpga_status FreeSRP::FreeSRP::impl::load_fpga(std::string filename)
     }
 }
 
-std::shared_ptr<rx_tx_buf> FreeSRP::FreeSRP::impl::rx()
+std::shared_ptr<FreeSRP::rx_tx_buf> FreeSRP::FreeSRP::impl::rx()
 {
     int transferred;
     std::shared_ptr<rx_tx_buf> rx_buf = std::make_shared<rx_tx_buf>();
@@ -648,7 +647,7 @@ bool FreeSRP::FreeSRP::impl::submit_tx_sample(sample &s)
     return _tx_buf.try_enqueue(s);
 }
 
-command FreeSRP::FreeSRP::impl::make_command(command_id id, double param) const
+FreeSRP::command FreeSRP::FreeSRP::impl::make_command(command_id id, double param) const
 {
     command cmd;
 
@@ -740,9 +739,9 @@ command FreeSRP::FreeSRP::impl::make_command(command_id id, double param) const
     return cmd;
 }
 
-response FreeSRP::FreeSRP::impl::send_cmd(command cmd) const
+FreeSRP::response FreeSRP::FreeSRP::impl::send_cmd(command cmd) const
 {
-    cmd_buf tx_buf{cmd.cmd, 1};
+    cmd_buf tx_buf{static_cast<unsigned char>(cmd.cmd), 1};
     memcpy(tx_buf.data() + 2, &cmd.param, sizeof(cmd.param));
 
     // Interrupt OUT transfer
@@ -770,7 +769,7 @@ response FreeSRP::FreeSRP::impl::send_cmd(command cmd) const
     return res;
 }
 
-freesrp_version FreeSRP::FreeSRP::impl::version()
+FreeSRP::freesrp_version FreeSRP::FreeSRP::impl::version()
 {
     response res = send_cmd({GET_FPGA_VERSION});
     uint8_t fpga_major_version = ((uint8_t*) &res.param)[0];

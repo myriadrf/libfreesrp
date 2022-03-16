@@ -35,7 +35,7 @@
 #include <iomanip>
 
 using namespace std;
-using namespace FreeSRP;
+//using namespace FreeSRP;
 
 enum optionIndex {NONE, HELP, OUTFILE, INFILE, FPGA, TX, LOOPBACK, CENTER_FREQ, BANDWIDTH, GAIN};
 const option::Descriptor usage[] = {
@@ -65,7 +65,7 @@ void sigint_callback(int s)
     _interrupt.notify_all();
 }
 
-void rx_callback(const vector<sample> &samples)
+void rx_callback(const vector<FreeSRP::sample> &samples)
 {
     static vector<int16_t> buf;
 
@@ -77,7 +77,7 @@ void rx_callback(const vector<sample> &samples)
     buf.resize(samples.size() * 2);
 
     int buf_index = 0;
-    for(const sample &s : samples)
+    for(const FreeSRP::sample &s : samples)
     {
         // Convert from 12-bit to full scale 16-bit and copy to output buffer
         buf[buf_index++] = (int16_t) (s.i * 16);
@@ -108,7 +108,7 @@ void rx_callback(const vector<sample> &samples)
     }
 }
 
-void tx_callback(vector<sample> &samples)
+void tx_callback(vector<FreeSRP::sample> &samples)
 {
     static vector<int16_t> buf;
 
@@ -122,7 +122,7 @@ void tx_callback(vector<sample> &samples)
     _in->read((char *) buf.data(), sizeof(int16_t) * 2 * samples.size());
 
     int buf_index = 0;
-    for(sample &s : samples)
+    for(FreeSRP::sample &s : samples)
     {
         // Convert from full scale 16-bit to 12 bit and copy to output buffer
         s.i = (int16_t) (buf[buf_index++] / 16);
@@ -154,7 +154,7 @@ void tx_callback(vector<sample> &samples)
 void start(FreeSRP::FreeSRP &srp)
 {
     // Enable datapath and start receiver
-    FreeSRP::response res = srp.send_cmd({SET_DATAPATH_EN, 1});
+    FreeSRP::response res = srp.send_cmd({FreeSRP::SET_DATAPATH_EN, 1});
     if(res.error != FreeSRP::CMD_OK)
     {
         throw runtime_error("Error enabling FreeSRP datapath!");
@@ -167,7 +167,7 @@ void stop(FreeSRP::FreeSRP &srp)
 {
     srp.stop_rx();
 
-    FreeSRP::response res = srp.send_cmd({SET_DATAPATH_EN, 0});
+    FreeSRP::response res = srp.send_cmd({FreeSRP::SET_DATAPATH_EN, 0});
     if(res.error != FreeSRP::CMD_OK)
     {
         throw runtime_error("Error disabling FreeSRP datapath!");
@@ -305,13 +305,13 @@ int main(int argc, char *argv[])
             cerr << "Loading FPGA with '" << fpgaconfig_filename << "'" << endl;
             switch(srp.load_fpga(fpgaconfig_filename))
             {
-            case FPGA_CONFIG_DONE:
+            case FreeSRP::FPGA_CONFIG_DONE:
                 cerr << "FPGA configured successfully" << endl;
                 break;
-            case FPGA_CONFIG_ERROR:
+            case FreeSRP::FPGA_CONFIG_ERROR:
                 cerr << "Error configuring FPGA!" << endl;
                 break;
-            case FPGA_CONFIG_SKIPPED:
+            case FreeSRP::FPGA_CONFIG_SKIPPED:
                 cerr << "FPGA already configured. To re-configure, please restart the FreeSRP." << endl;
                 break;
             }
@@ -329,31 +329,31 @@ int main(int argc, char *argv[])
         cerr << "Version: " << srp.version() << endl;
 
         // Set center frequency
-        response r = srp.send_cmd(srp.make_command(SET_RX_LO_FREQ, center_freq));
-        if(r.error != CMD_OK)
+        FreeSRP::response r = srp.send_cmd(srp.make_command(FreeSRP::SET_RX_LO_FREQ, center_freq));
+        if(r.error != FreeSRP::CMD_OK)
         {
             std::cerr << "Could not set RX LO frequency, error: " << r.error << endl;
             return 1;
         }
 
         // Set bandwidth and sample rate
-        r = srp.send_cmd(srp.make_command(SET_RX_RF_BANDWIDTH, bandwidth));
-        if(r.error != CMD_OK)
+        r = srp.send_cmd(srp.make_command(FreeSRP::SET_RX_RF_BANDWIDTH, bandwidth));
+        if(r.error != FreeSRP::CMD_OK)
         {
             std::cerr << "Could not set RX bandwidth, error: " << r.error << endl;
             return 1;
         }
 
-        r = srp.send_cmd(srp.make_command(SET_RX_SAMP_FREQ, bandwidth));
-        if(r.error != CMD_OK)
+        r = srp.send_cmd(srp.make_command(FreeSRP::SET_RX_SAMP_FREQ, bandwidth));
+        if(r.error != FreeSRP::CMD_OK)
         {
             std::cerr << "Could not set RX sample frequency, error: " << r.error << endl;
             return 1;
         }
 
         // Set gain
-        r = srp.send_cmd(srp.make_command(SET_RX_RF_GAIN, gain));
-        if(r.error != CMD_OK)
+        r = srp.send_cmd(srp.make_command(FreeSRP::SET_RX_RF_GAIN, gain));
+        if(r.error != FreeSRP::CMD_OK)
         {
             std::cerr << "Could not set RX gain, error: " << r.error << endl;
             return 1;
@@ -362,8 +362,8 @@ int main(int argc, char *argv[])
         if(loopback)
         {
             // Enable loopback
-            r = srp.send_cmd(srp.make_command(SET_LOOPBACK_EN, 1));
-            if(r.error != CMD_OK)
+            r = srp.send_cmd(srp.make_command(FreeSRP::SET_LOOPBACK_EN, 1));
+            if(r.error != FreeSRP::CMD_OK)
             {
                 std::cerr << "Could not enable loopback mode, error: " << r.error << endl;
                 return 1;
@@ -409,8 +409,8 @@ int main(int argc, char *argv[])
         if(loopback)
         {
             // Disable loopback
-            r = srp.send_cmd(srp.make_command(SET_LOOPBACK_EN, 0));
-            if(r.error != CMD_OK)
+            r = srp.send_cmd(srp.make_command(FreeSRP::SET_LOOPBACK_EN, 0));
+            if(r.error != FreeSRP::CMD_OK)
             {
                 std::cerr << "Could not disable loopback mode, error: " << r.error << endl;
                 return 1;
@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
 
         return 0;
     }
-    catch(const ConnectionError &e)
+    catch(const FreeSRP::ConnectionError &e)
     {
         cerr << "Could not connect to FreeSRP: " << e.what() << endl;
     }
@@ -431,7 +431,7 @@ int main(int argc, char *argv[])
     }
 
     // Check for FX3
-    if(Util::find_fx3())
+    if(FreeSRP::Util::find_fx3())
     {
         cerr << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
                 "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
