@@ -27,7 +27,7 @@
 #include "optionparser.hpp"
 
 using namespace std;
-using namespace FreeSRP;
+//using namespace FreeSRP;
 
 bool process_command(const FreeSRP::FreeSRP &srp)
 {
@@ -76,7 +76,7 @@ bool process_command(const FreeSRP::FreeSRP &srp)
                 {
                     cmd.func(srp, params);
                 }
-                catch(ConnectionError e)
+                catch(FreeSRP::ConnectionError e)
                 {
                     cerr << "Error sending command to FreeSRP, " << e.what() << endl;
                     exit = true;
@@ -126,7 +126,7 @@ void list_devices()
 void check_fx3()
 {
     // Check for FX3
-    if(Util::find_fx3())
+    if(FreeSRP::Util::find_fx3())
     {
         cout << "NOTE: Found a Cypress EZ-USB FX3 device. This could be a FreeSRP in bootloader mode.\n"
                 "You can upload the FreeSRP firmware to it by running 'freesrp-ctl --fx3=/path/to/firmware.img'" << endl;
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
         // Upload firmware to FX3.
         try
         {
-            if(Util::find_fx3(true, fx3_firmware))
+            if(FreeSRP::Util::find_fx3(true, fx3_firmware))
             {
                 // Firmware upload succeeded, continue
                 cout << "Sucessfully uploaded FreeSRP firmware to FX3" << endl;
@@ -237,13 +237,13 @@ int main(int argc, char *argv[])
             cout << "Loading FPGA with '" << fpgaconfig_filename << "'" << endl;
             switch(srp.load_fpga(fpgaconfig_filename))
             {
-                case FPGA_CONFIG_DONE:
+                case FreeSRP::FPGA_CONFIG_DONE:
                     cout << "FPGA configured successfully" << endl;
                     break;
-                case FPGA_CONFIG_ERROR:
+                case FreeSRP::FPGA_CONFIG_ERROR:
                     cout << "Error configuring FPGA!" << endl;
                     break;
-                case FPGA_CONFIG_SKIPPED:
+                case FreeSRP::FPGA_CONFIG_SKIPPED:
                     cout << "FPGA already configured. To re-configure, please restart the FreeSRP." << endl;
                     break;
             }
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
             while(process_command(srp)) {}
         }
     }
-    catch(const ConnectionError &e)
+    catch(const FreeSRP::ConnectionError &e)
     {
         cerr << "Could not connect to FreeSRP: " << e.what() << endl;
     }

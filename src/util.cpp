@@ -49,7 +49,7 @@ void ram_write(libusb_device_handle *fx3_handle, unsigned char *buf, unsigned in
     }
 }
 
-bool FreeSRP::Util::find_fx3(bool upload_firmware, std::string filename)
+bool Util::find_fx3(bool upload_firmware, std::string filename)
 {
     // TODO: This is UGLY! Clean up
 

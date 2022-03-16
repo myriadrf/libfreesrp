@@ -43,6 +43,8 @@ set_target_properties(freesrp PROPERTIES VERSION ${VERSION} SOVERSION ${VERSION_
 target_link_libraries(freesrp ${LIBUSB_1_LIBRARIES})
 
 # Examples
+FIND_PACKAGE(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # freesrp-io, using callbacks instead of busy waiting
